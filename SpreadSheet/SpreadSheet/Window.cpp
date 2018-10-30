@@ -52,7 +52,7 @@ HWND Window::initialize(HINSTANCE hInstance, int nCmdShow)
 {
 	WNDCLASSEX wndClassEx = { };
 	registerClass(wndClassEx, hInstance, Window::windowProc);
-	HWND hWnd = CreateWindow(DEFAULT_CLASS_NAME, DEFAULT_WINDOW_NAME, WS_OVERLAPPEDWINDOW,
+	HWND hWnd = CreateWindow(DEFAULT_CLASS_NAME, DEFAULT_WINDOW_NAME, WS_OVERLAPPEDWINDOW | WS_HSCROLL | WS_VSCROLL,
 		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, nullptr, nullptr, hInstance, 0);
 
 	// save a reference to the current Window instance 
@@ -105,6 +105,10 @@ LRESULT CALLBACK Window::windowProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 		{
 			window->processCreateChildItemsRequest();
 		}
+		// FOR DEBUGGING ONLY
+		window->loadStringsFromFile();
+		PostMessage(hWnd, WM_COMMAND, window->DEFAULT_BUTTON_NO, 0);
+		//
 		break;
 	}
 	case WM_COMMAND:
@@ -113,7 +117,7 @@ LRESULT CALLBACK Window::windowProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 		{
 			if (LOWORD(wParam) == window->DEFAULT_BUTTON_NO)
 			{
-				window->processShowSpreadsheetRequest();
+				window->processShowSpreadsheetRequest(lParam);
 			}
 		}
 		break;
@@ -126,7 +130,30 @@ LRESULT CALLBACK Window::windowProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 		}
 		break;
 	}
-	case WM_SIZE:
+	case WM_SIZE: 
+	{
+		if (s != nullptr)
+		{
+			s->resize(lParam);
+		}
+		return DefWindowProc(hWnd, message, wParam, lParam);
+	}
+	case WM_HSCROLL:
+	{
+		if (s != nullptr)
+		{
+			s->hScroll(wParam);
+		}
+		break;
+	}
+	case WM_VSCROLL:
+	{
+		if (s != nullptr)
+		{
+			s->vScroll(wParam);
+		}
+		break;
+	}
 	case WM_PAINT: 
 	{	
 		if (s != nullptr)
@@ -148,7 +175,7 @@ LRESULT CALLBACK Window::windowProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 	return 0;
 }
 
-bool Window::processShowSpreadsheetRequest() 
+bool Window::processShowSpreadsheetRequest(LPARAM lParam) 
 {
 	bool result = false;
 
@@ -173,9 +200,9 @@ bool Window::processShowSpreadsheetRequest()
 			MessageBox(hWnd, L"Incorrect values", L"Attention", MB_OK);
 			
 		}
-		else // create table if input is value
+		else // create table if input is correct
 		{
-			s->initialize(rows, columns);
+			s->initialize(rows, columns, lParam);
 
 			DestroyWindow(this->editRowshWnd_);
 			DestroyWindow(this->editColumnshWnd_);
@@ -200,7 +227,7 @@ bool Window::processCreateChildItemsRequest()
 	{
 		// creating child windows 
 		this->editRowshWnd_ =
-			CreateWindow(L"EDIT", L"",
+			CreateWindow(L"EDIT", L"9",
 				this->DEFAULT_CHILD_STYLE,
 				this->EDIT_ROWS_DEFAULT_POSITION.left,
 				this->EDIT_ROWS_DEFAULT_POSITION.top,
@@ -209,7 +236,7 @@ bool Window::processCreateChildItemsRequest()
 				this->hWnd_, nullptr, nullptr, nullptr
 			);
 		this->editColumnshWnd_ =
-			CreateWindow(L"EDIT", L"",
+			CreateWindow(L"EDIT", L"9",
 				this->DEFAULT_CHILD_STYLE,
 				this->EDIT_COLUMNS_DEFAULT_POSITION.left,
 				this->EDIT_COLUMNS_DEFAULT_POSITION.top,
@@ -230,3 +257,46 @@ bool Window::processCreateChildItemsRequest()
 
 	return result;
 }
+
+bool Window::loadStringsFromFile()
+{
+	WCHAR fileName[MAX_PATH] = { };
+
+	OPENFILENAME openFileName;
+	openFileName.lStructSize = sizeof(OPENFILENAME);
+	openFileName.hwndOwner = hWnd_;
+	openFileName.hInstance = nullptr;
+	openFileName.lpstrFilter = L"Text files\0*.txt\0\0";
+	openFileName.lpstrCustomFilter = nullptr;
+	openFileName.nFilterIndex = 1;
+	openFileName.lpstrFile = fileName;
+	openFileName.nMaxFile = sizeof(fileName);
+	openFileName.lpstrFileTitle = nullptr;
+	openFileName.lpstrInitialDir = nullptr;
+	openFileName.lpstrTitle = L"Select text file";
+	openFileName.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+	openFileName.lpstrDefExt = nullptr;
+
+	bool sucessful = GetOpenFileName(&openFileName);
+	if (sucessful)
+	{	
+		std::wifstream stream(fileName, std::ios::binary);
+		std::wstring line;                                          
+
+		if (stream.is_open())
+		{
+			while (std::getline(stream, line))                           
+			{
+				tableData_.push_back(line);                                   
+			}	
+			stream.close();
+		}
+		else 
+		{
+			sucessful = false;
+		}
+	}
+	return sucessful;
+}
+
+

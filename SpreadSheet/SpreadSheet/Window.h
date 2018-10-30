@@ -7,6 +7,10 @@
 #include "GraphicDefines.h"
 #include "SpreadSheet.h"
 #include <string>
+#include <iostream>
+#include <sstream>
+#include <vector>
+#include <fstream>
 
 class Window
 {
@@ -40,6 +44,8 @@ private:
 	const int DEFAULT_BUTTON_NO = 1;
 	const int MAX_TEXT_LENGTH = 20;
 
+	std::vector<std::wstring> tableData_;
+
 	SpreadSheet* spreadSheet_ = nullptr;
 
 	HWND initialize(HINSTANCE hInstance, int nCmdShow);
@@ -48,7 +54,9 @@ private:
 
 	static LRESULT CALLBACK windowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
-	bool processShowSpreadsheetRequest();
+	bool processShowSpreadsheetRequest(LPARAM lParam);
 
 	bool processCreateChildItemsRequest();
+
+	bool loadStringsFromFile();
 };
