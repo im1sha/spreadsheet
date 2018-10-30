@@ -10,22 +10,24 @@
 class SpreadSheet {
 public:
 
-	SpreadSheet(HWND hWnd, HINSTANCE hInstanse);
+	SpreadSheet(HWND hWnd);
 
 	~SpreadSheet();
 	
 	void update();
-	void initialize(int x, int y);
+	void initialize(int rows, int columns);
 
-	const int MAX_VALUE = 9;
-	const int MIN_VALUE = 1;
+	const int MAX_LINES = 9;
+	const int MIN_LINES = 1;
 
 private:
-	int x_ = 0;
-	int y_ = 0;
+	int rows_ = 0;
+	int columns_ = 0;
 
-	HWND hWnd_ = nullptr;
+	HWND hWnd_ = nullptr; // associated HWND
 
-	void drawSpreadSheet(int x, int y);
+	void draw(int rows, int columns);
+	int * getTextHeights(int rows, int columns, int xStep, HDC wndDC, RECT clientRect, WCHAR ** strings);
+	void paintTable(int rows, int columns, int xStep, int * ySteps, HDC wndDC, WCHAR ** strings);
 	void destoy();
 };
