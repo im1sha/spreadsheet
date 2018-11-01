@@ -52,7 +52,7 @@ HWND Window::initialize(HINSTANCE hInstance, int nCmdShow)
 {
 	WNDCLASSEX wndClassEx = { };
 	registerClass(wndClassEx, hInstance, Window::windowProc);
-	HWND hWnd = CreateWindow(DEFAULT_CLASS_NAME, DEFAULT_WINDOW_NAME, WS_OVERLAPPEDWINDOW | WS_HSCROLL | WS_VSCROLL,
+	HWND hWnd = CreateWindow(DEFAULT_CLASS_NAME, DEFAULT_WINDOW_NAME, WS_OVERLAPPEDWINDOW /*| WS_HSCROLL | WS_VSCROLL*/,
 		100, 100, DEFAULT_WINDOW_WIDTH_HEIGHT.x, DEFAULT_WINDOW_WIDTH_HEIGHT.y, HWND_DESKTOP, nullptr, hInstance, 0);
 
 	// save a reference to the current Window instance 
@@ -114,13 +114,13 @@ LRESULT CALLBACK Window::windowProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 	}
 	case WM_GETMINMAXINFO:
 	{
-		if ((s != nullptr) && (s->areDimensionsSet()))
+		/*if ((s != nullptr) && (s->areDimensionsSet()))
 		{
 			MINMAXINFO* m = (MINMAXINFO*)lParam;
 			POINT minDimensions = s->getMinWidthAndHeight();
 			m->ptMinTrackSize.x = minDimensions.x;
 			m->ptMinTrackSize.y = minDimensions.y;
-		}
+		}*/
 		return 0;
 	}
 	case WM_COMMAND:
@@ -143,29 +143,29 @@ LRESULT CALLBACK Window::windowProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 		break;
 	}
 	case WM_SIZE: 
-	{
-		if (s != nullptr)
-		{
-			s->resize(lParam);
-		}
-		return DefWindowProc(hWnd, message, wParam, lParam);
-	}
-	case WM_HSCROLL:
-	{
-		if (s != nullptr)
-		{
-			s->hScroll(wParam);
-		}
-		break;
-	}
-	case WM_VSCROLL:
-	{
-		if (s != nullptr)
-		{
-			s->vScroll(wParam);
-		}
-		break;
-	}
+	//{
+	//	if (s != nullptr)
+	//	{
+	//		s->resize(lParam);
+	//	}
+	//	return DefWindowProc(hWnd, message, wParam, lParam);
+	//}
+	//case WM_HSCROLL:
+	//{
+	//	if (s != nullptr)
+	//	{
+	//		s->hScroll(wParam);
+	//	}
+	//	break;
+	//}
+	//case WM_VSCROLL:
+	//{
+	//	if (s != nullptr)
+	//	{
+	//		s->vScroll(wParam);
+	//	}
+	//	break;
+	//}
 	case WM_PAINT: 
 	{	
 		if (s != nullptr)
@@ -322,3 +322,4 @@ bool Window::loadStringsFromFile()
 	}
 	return true;// sucessful;
 }
+

@@ -44,11 +44,10 @@ private:
 	LONG charWidth_ = 0;
 	LONG charHeight_ = 0;
 
-	LONG minCellWidth_ = 0;
-	LONG minCellHeight_ = 0;
+	LONG minColumnWidth_ = 0;
 
-	LONG minDisplayedHeight_ = 0;
 	LONG minDisplayedWidth_ = 0;
+	LONG minDisplayedHeight_ = 0;
 
 	const LONG MIN_CHAR_IN_CELL_LINE = 3;
 	const LONG MIN_LINES_IN_CELL = 1;
@@ -62,9 +61,11 @@ private:
 
 	void draw(int rows, int columns);
 
-	int* getTextHeights(int rows, int columns, int xStep, HDC wndDC, RECT clientRect, WCHAR** strings);
+	std::vector<int> getTextHeights(std::vector<std::vector<int> > lengths,  int lineWidth, int charHeight);
 
-	void paintTable(int rows, int columns, int xStep, int* ySteps, HDC wndDC, WCHAR** strings);
+	void paintTable(int rows, int columns, int xStep, std::vector<int> ySteps, std::vector<int> textHeights, HDC wndDC, WCHAR** strings);
+
+	int getMaxLinesInRow(std::vector<std::vector<int>> lengths, int lineWidth);
 
 	void destoy();
 

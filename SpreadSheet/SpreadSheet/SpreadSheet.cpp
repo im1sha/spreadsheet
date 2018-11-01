@@ -37,20 +37,28 @@ void SpreadSheet::initialize(int rows, int columns, std::vector<std::wstring> st
 	GetTextMetrics(hdc, &tm);
 	ReleaseDC(hWnd_, hdc);
 
-	charWidth_ = tm.tmMaxCharWidth;
+	charWidth_ = ( tm.tmMaxCharWidth + tm.tmAveCharWidth) / 2;
 	charHeight_ = tm.tmHeight + tm.tmExternalLeading;
-
-	minCellWidth_ = MIN_CHAR_IN_CELL_LINE * charWidth_;
-	minCellHeight_ = MIN_LINES_IN_CELL * charHeight_;
-
-	minDisplayedWidth_ = columns_ * minCellWidth_;
-	minDisplayedHeight_ = rows_ * minCellHeight_;
-
+	
 	processStrings(strings);
+
+	for (size_t i = 0; i < wordsLenghts_.size(); i++)
+	{
+		for (size_t j = 0; j < wordsLenghts_[i].size(); j++)
+		{
+			if (wordsLenghts_[i][j] > minColumnWidth_)
+			{
+				minColumnWidth_ = wordsLenghts_[i][j] + charWidth_;
+			}
+		}
+	}
+
+	minDisplayedHeight_ = charHeight_;
+	minDisplayedWidth_ = columns_ * minColumnWidth_;
 
 	isInitialized_ = true;
 
-	resize(lParam);
+	//resize(lParam);
 }
 
 WCHAR** SpreadSheet::toWcharArray(std::vector<std::wstring> strings)
@@ -153,6 +161,8 @@ void SpreadSheet::update()
 	}
 }
 
+
+// ~
 void SpreadSheet::resize(LPARAM lParam)
 {
 	if (isInitialized_)
@@ -183,10 +193,6 @@ void SpreadSheet::resize(LPARAM lParam)
 // 
 void SpreadSheet::draw(int rows, int columns)
 {
-	/*if ((clientRect.bottom - clientRect.top > minDisplayedHeight_) &&
-		(clientRect.right - clientRect.left > minDisplayedWidth_)) {
-	}*/
-
 	// client window's data gathering
 	RECT clientRect;
 	GetClientRect(hWnd_, &clientRect);
@@ -219,24 +225,33 @@ void SpreadSheet::draw(int rows, int columns)
 	//------------------------------------
 
 
-
 	// draw parameters calculating
-	int xStep = (clientRect.right - clientRect.left) / columns;
-	int* textHeights = getTextHeights(rows, columns, xStep, wndDC, clientRect, tableStrings_);
+	int averageColumnWidth = (clientRect.right - clientRect.left) / columns;
+	int xStep = (averageColumnWidth < minColumnWidth_) ? minColumnWidth_ : averageColumnWidth;
+
+	std::vector<int> textHeights = getTextHeights(wordsLenghts_, xStep, charHeight_);
+
 	int fullTextHeight = 0;
 	for (size_t i = 0; i < rows; i++)
 	{
 		fullTextHeight += textHeights[i];		
 	}	
-	int* ySteps = new int[rows];
-	for (size_t i = 0; i < rows; i++)
+
+	std::vector<int> ySteps(rows);
+
+	if (clientRect.bottom - clientRect.top > fullTextHeight)
 	{
-		ySteps[i] = textHeights[i] + (clientRect.bottom - clientRect.top - fullTextHeight) / rows;
+		for (size_t i = 0; i < rows; i++)
+		{
+			ySteps[i] = textHeights[i] + (clientRect.bottom - clientRect.top - fullTextHeight) / rows;
+		}
+	}
+	else 
+	{
+		ySteps = textHeights;
 	}
 
-	paintTable(rows, columns, xStep, ySteps, wndDC, tableStrings_);
-
-	delete[] textHeights;
+	paintTable(rows, columns, xStep, ySteps, textHeights, wndDC, tableStrings_);
 
 	// defaults restoring
 	SetBkMode(wndDC, oldBackgroung);
@@ -246,6 +261,8 @@ void SpreadSheet::draw(int rows, int columns)
 	ReleaseDC(hWnd_, wndDC);
 }
 
+
+// ~
 void SpreadSheet::vScroll(WPARAM wParam)
 {
 	SCROLLINFO si;
@@ -301,6 +318,7 @@ void SpreadSheet::vScroll(WPARAM wParam)
 
 }
 
+// ~
 void SpreadSheet::hScroll(WPARAM wParam)
 {
 	SCROLLINFO si;
@@ -349,33 +367,26 @@ void SpreadSheet::hScroll(WPARAM wParam)
 }
 
 // Calculates max text height in row
-int* SpreadSheet::getTextHeights(int rows, int columns, int xStep, HDC wndDC, RECT clientRect, WCHAR** strings)
+std::vector<int> SpreadSheet::getTextHeights(std::vector<std::vector<int> > lengths, int lineWidth, int lineHeight)
 {
-	int* textHeights = new int[rows] { };
-	RECT defaultCell = {
-		0,
-		0,
-		(clientRect.right - clientRect.left) / columns,
-		xStep
-	};
-	for (size_t j = 0; j < rows; j++)
+	std::vector<int> textHeights;
+
+	for (size_t i = 0; i < rows_; i++)
 	{
-		for (size_t i = 0; i < columns; i++)
-		{
-			WCHAR* textToPrint = strings[j * columns + i];
-			RECT textBounds = defaultCell;
-			int height = DrawText(wndDC, textToPrint, (int)wcslen(textToPrint),
-				&textBounds, DT_CALCRECT | DT_CENTER | DT_WORDBREAK);
-			if (height > textHeights[j])
-			{
-				textHeights[j] = height;
-			}
-		}
+		std::vector<std::vector<int> >::const_iterator start = wordsLenghts_.begin() + i * columns_;
+		std::vector<std::vector<int> >::const_iterator end = wordsLenghts_.begin() + (i + 1) * columns_;
+		std::vector<std::vector<int> > rowValues(start, end);
+		textHeights.push_back(getMaxLinesInRow(rowValues, lineWidth));
+	}
+	for (size_t i = 0; i < textHeights.size(); i++)
+	{
+		textHeights[i] *= lineHeight;
 	}
 	return textHeights;
 }
 
-void SpreadSheet::paintTable(int rows, int columns, int xStep, int* ySteps, HDC wndDC, WCHAR** strings)
+//
+void SpreadSheet::paintTable(int rows, int columns, int xStep, std::vector<int> ySteps, std::vector<int> textHeights, HDC wndDC, WCHAR** strings)
 {
 	int currentBottom = 0;
 	for (size_t j = 0; j < rows; j++)
@@ -392,20 +403,16 @@ void SpreadSheet::paintTable(int rows, int columns, int xStep, int* ySteps, HDC 
 				(LONG)(xStep * (i + 1)),
 				(LONG)(currentBottom)
 			};
-
-			RECT textBounds = cell;
-			int height = DrawText(wndDC, textToPrint, (int)wcslen(textToPrint),
-				&textBounds, DT_CALCRECT | DT_CENTER | DT_WORDBREAK | DT_EDITCONTROL);
-
+	
 			RECT textRect = cell;
-			textRect.top = currentBottom - ((ySteps[j] + height) / 2);
+			textRect.top = currentBottom - ((ySteps[j] + textHeights[j]) / 2);
 
 			Rectangle(
 				wndDC,
 				cell.left,
 				cell.top,
-				cell.right,
-				cell.bottom
+				cell.right + 1,
+				cell.bottom + 1
 			);
 
 			DrawText(wndDC, textToPrint, (int)wcslen(textToPrint),
@@ -413,3 +420,31 @@ void SpreadSheet::paintTable(int rows, int columns, int xStep, int* ySteps, HDC 
 		}
 	}
 }
+
+int SpreadSheet::getMaxLinesInRow(std::vector<std::vector<int> > lengths, int lineWidth)
+{
+	int maxLines = 1;
+	for (size_t i = 0; i < lengths.size(); i++)
+	{
+		int currentLines = 1;
+		int filledNow = 0;
+		for (size_t j = 0; j < lengths[i].size(); j++)
+		{
+			filledNow += charWidth_ + lengths[i][j]; // space + word 
+			if (filledNow > lineWidth)
+			{
+				currentLines += 1;
+				filledNow = 0;
+			}
+		}
+
+		if (currentLines > maxLines)
+		{
+			maxLines = currentLines;
+		}
+	}
+
+	return maxLines;
+}
+
+

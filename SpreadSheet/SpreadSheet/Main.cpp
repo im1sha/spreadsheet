@@ -12,3 +12,4 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR lpCmdLine, int nCmd
 	delete w;
 	return 0;
 }
+
