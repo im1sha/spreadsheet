@@ -14,10 +14,20 @@ SpreadSheet::~SpreadSheet()
 
 void SpreadSheet::destoy()
 {
-
+	if (tableStrings_ != nullptr)
+	{
+		for (size_t i = 0; i < MAX_STRINGS; i++)
+		{
+			if (tableStrings_[i] != nullptr)
+			{
+				free(tableStrings_[i]);
+			}
+		}
+		free(tableStrings_);
+	}
 }
 
-void SpreadSheet::initialize(int rows, int columns, LPARAM lParam)
+void SpreadSheet::initialize(int rows, int columns, std::vector<std::wstring> strings, LPARAM lParam)
 {
 	rows_ = rows;
 	columns_ = columns;
@@ -25,19 +35,114 @@ void SpreadSheet::initialize(int rows, int columns, LPARAM lParam)
 	HDC hdc = GetDC(hWnd_);
 	TEXTMETRIC tm;
 	GetTextMetrics(hdc, &tm);
+	ReleaseDC(hWnd_, hdc);
 
-	charWidth_ = tm.tmAveCharWidth;
+	charWidth_ = tm.tmMaxCharWidth;
 	charHeight_ = tm.tmHeight + tm.tmExternalLeading;
+
 	minCellWidth_ = MIN_CHAR_IN_CELL_LINE * charWidth_;
 	minCellHeight_ = MIN_LINES_IN_CELL * charHeight_;
+
 	minDisplayedWidth_ = columns_ * minCellWidth_;
 	minDisplayedHeight_ = rows_ * minCellHeight_;
 
-	ReleaseDC(hWnd_, hdc);
+	processStrings(strings);
 
 	isInitialized_ = true;
 
 	resize(lParam);
+}
+
+WCHAR** SpreadSheet::toWcharArray(std::vector<std::wstring> strings)
+{
+	if (strings.size() == 0)
+	{
+		return nullptr;
+	}
+
+	WCHAR ** result = (WCHAR **)calloc(SpreadSheet::MAX_STRINGS,
+		sizeof(WCHAR *));
+
+	size_t stringLenght;
+	for (size_t i = 0; i < strings.size(); i++)
+	{
+		stringLenght = strings[i].size();
+		result[i] = (WCHAR *)calloc(stringLenght + 1, sizeof(WCHAR));
+		strings[i].copy(result[i], stringLenght, 0);
+	}
+
+	return result;
+}
+
+std::vector<std::wstring> SpreadSheet::split(const std::wstring stringToSplit, wchar_t delimiter)
+{
+	std::vector<std::wstring> elements;
+	std::wstringstream ss(stringToSplit);
+	std::wstring item;
+	while (getline(ss, item, delimiter))
+	{
+		elements.push_back(item);
+	}
+	return elements;
+}
+
+std::wstring SpreadSheet::deleteExtraDelimiters(const std::wstring s, wchar_t delimiter)
+{
+	std::vector<std::wstring> elements;
+	std::wstringstream ss(s);
+	std::wstring item;
+	while (getline(ss, item, delimiter))
+	{
+		if (item.size() != 0)
+		{
+			elements.push_back(item);
+		}
+	}
+	std::wstring result = L"";
+
+	if (elements.size() != 0)
+	{
+		for (size_t i = 0; i < elements.size() - 1; i++)
+		{
+			result += elements[i] + delimiter;
+		}
+		result += elements[elements.size() - 1];
+	}
+
+	return result;
+}
+
+bool SpreadSheet::areDimensionsSet()
+{
+	return isInitialized_;
+}
+
+POINT SpreadSheet::getMinWidthAndHeight()
+{
+	return { minDisplayedWidth_, minDisplayedHeight_ };
+}
+
+void SpreadSheet::processStrings(std::vector<std::wstring> strings)
+{
+	for (size_t i = 0; i < strings.size(); i++)
+	{
+		strings[i] = deleteExtraDelimiters(strings[i], ' ');
+		std::vector<std::wstring> words = split(strings[i], ' ');
+
+		std::vector<int> totalChars;
+		std::vector<int> totalLenght;
+
+		for (size_t i = 0; i < words.size(); i++)
+		{
+			int charsInWord = words[i].size();
+			totalChars.push_back(charsInWord);
+			totalLenght.push_back(charsInWord * charWidth_);
+		}
+
+		charsInWords_.push_back(totalChars);
+		wordsLenghts_.push_back(totalLenght);
+	}
+	tableStrings_ = toWcharArray(strings);
 }
 
 void SpreadSheet::update()
@@ -99,31 +204,25 @@ void SpreadSheet::draw(int rows, int columns)
 
 	//------------------------------------
 
-	SCROLLINFO si;
-	si.cbSize = sizeof(si);
-	si.fMask = SIF_POS;
-	GetScrollInfo(hWnd_, SB_VERT, &si);
-	int yPos = si.nPos;
-	// Get horizontal scroll bar position.
-	GetScrollInfo(hWnd_, SB_HORZ, &si);
-	int xPos = si.nPos;
-	// Find painting limits.
-	int FirstLine = max(0, yPos + ps.rcPaint.top / charHeight_);
-	int LastLine = min(100, yPos + ps.rcPaint.bottom / charHeight_); // 100 - lines in table 
+	//SCROLLINFO si;
+	//si.cbSize = sizeof(si);
+	//si.fMask = SIF_POS;
+	//GetScrollInfo(hWnd_, SB_VERT, &si);
+	//int yPos = si.nPos;
+	//// Get horizontal scroll bar position.
+	//GetScrollInfo(hWnd_, SB_HORZ, &si);
+	//int xPos = si.nPos;
+	//// Find painting limits.
+	//int FirstLine = max(0, yPos + ps.rcPaint.top / charHeight_);
+	//int LastLine = min(100, yPos + ps.rcPaint.bottom / charHeight_); // 100 - lines in table 
 
 	//------------------------------------
 
 
-	// string processing
-	WCHAR str1[] = L"qwertyhrt qwertyhrt qwertyhrt qwertyhrt qwertyhrt qwertyhrt qwertyhrt qwertyhrt";
-	WCHAR str2[] = L"ooo zzz yyy";
-	WCHAR** strings = (WCHAR **)calloc(2, sizeof(WCHAR *));
-	strings[0] = str1;
-	strings[1] = str2;
 
 	// draw parameters calculating
 	int xStep = (clientRect.right - clientRect.left) / columns;
-	int* textHeights = getTextHeights(rows, columns, xStep, wndDC, clientRect, strings);
+	int* textHeights = getTextHeights(rows, columns, xStep, wndDC, clientRect, tableStrings_);
 	int fullTextHeight = 0;
 	for (size_t i = 0; i < rows; i++)
 	{
@@ -135,9 +234,8 @@ void SpreadSheet::draw(int rows, int columns)
 		ySteps[i] = textHeights[i] + (clientRect.bottom - clientRect.top - fullTextHeight) / rows;
 	}
 
-	paintTable(rows, columns, xStep, ySteps, wndDC, strings);
+	paintTable(rows, columns, xStep, ySteps, wndDC, tableStrings_);
 
-	free(strings);
 	delete[] textHeights;
 
 	// defaults restoring
@@ -251,7 +349,7 @@ void SpreadSheet::hScroll(WPARAM wParam)
 }
 
 // Calculates max text height in row
-int* SpreadSheet::getTextHeights(int rows, int columns, int xStep, HDC wndDC, RECT clientRect, WCHAR ** strings)
+int* SpreadSheet::getTextHeights(int rows, int columns, int xStep, HDC wndDC, RECT clientRect, WCHAR** strings)
 {
 	int* textHeights = new int[rows] { };
 	RECT defaultCell = {
@@ -264,7 +362,7 @@ int* SpreadSheet::getTextHeights(int rows, int columns, int xStep, HDC wndDC, RE
 	{
 		for (size_t i = 0; i < columns; i++)
 		{
-			WCHAR* textToPrint = (j % 2 == 0) ? strings[0] : strings[1];
+			WCHAR* textToPrint = strings[j * columns + i];
 			RECT textBounds = defaultCell;
 			int height = DrawText(wndDC, textToPrint, (int)wcslen(textToPrint),
 				&textBounds, DT_CALCRECT | DT_CENTER | DT_WORDBREAK);
@@ -277,7 +375,7 @@ int* SpreadSheet::getTextHeights(int rows, int columns, int xStep, HDC wndDC, RE
 	return textHeights;
 }
 
-void SpreadSheet::paintTable(int rows, int columns, int xStep, int *ySteps, HDC wndDC, WCHAR ** strings)
+void SpreadSheet::paintTable(int rows, int columns, int xStep, int* ySteps, HDC wndDC, WCHAR** strings)
 {
 	int currentBottom = 0;
 	for (size_t j = 0; j < rows; j++)
@@ -286,7 +384,7 @@ void SpreadSheet::paintTable(int rows, int columns, int xStep, int *ySteps, HDC 
 		currentBottom += yStep;
 		for (size_t i = 0; i < columns; i++)
 		{
-			WCHAR* textToPrint = (j % 2 == 0) ? strings[0] : strings[1];
+			WCHAR* textToPrint = strings[j * columns + i];
 
 			RECT cell = {
 				(LONG)(xStep * i),
@@ -297,7 +395,7 @@ void SpreadSheet::paintTable(int rows, int columns, int xStep, int *ySteps, HDC 
 
 			RECT textBounds = cell;
 			int height = DrawText(wndDC, textToPrint, (int)wcslen(textToPrint),
-				&textBounds, DT_CALCRECT | DT_CENTER | DT_WORDBREAK);
+				&textBounds, DT_CALCRECT | DT_CENTER | DT_WORDBREAK | DT_EDITCONTROL);
 
 			RECT textRect = cell;
 			textRect.top = currentBottom - ((ySteps[j] + height) / 2);
@@ -311,7 +409,7 @@ void SpreadSheet::paintTable(int rows, int columns, int xStep, int *ySteps, HDC 
 			);
 
 			DrawText(wndDC, textToPrint, (int)wcslen(textToPrint),
-				&textRect, DT_CENTER | DT_WORDBREAK);
+				&textRect, DT_CENTER | DT_WORDBREAK | DT_EDITCONTROL);
 		}
 	}
 }

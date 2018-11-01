@@ -6,6 +6,9 @@
 
 #include "GraphicDefines.h"
 #include <string>
+#include <sstream>
+#include <vector>
+#include <iostream>
 
 class SpreadSheet {
 public:
@@ -14,6 +17,7 @@ public:
 
 	~SpreadSheet();
 	
+	static const int MAX_STRINGS = 81;
 	const int MAX_LINES = 9;
 	const int MIN_LINES = 1;
 
@@ -25,20 +29,28 @@ public:
 
 	void update();
 
-	void initialize(int rows, int columns, LPARAM lParam);
+	void initialize(int rows, int columns, std::vector<std::wstring> strings, LPARAM lParam);
+	
+	bool areDimensionsSet();
+
+	POINT getMinWidthAndHeight();
 
 private:
 
-	LONG charWidth_;
-	LONG charHeight_;
+	WCHAR** tableStrings_ = nullptr;
+	std::vector<std::vector<int> > charsInWords_;
+	std::vector<std::vector<int> > wordsLenghts_;
+	
+	LONG charWidth_ = 0;
+	LONG charHeight_ = 0;
 
-	LONG minCellWidth_;
-	LONG minCellHeight_;
+	LONG minCellWidth_ = 0;
+	LONG minCellHeight_ = 0;
 
-	LONG minDisplayedHeight_;
-	LONG minDisplayedWidth_;
+	LONG minDisplayedHeight_ = 0;
+	LONG minDisplayedWidth_ = 0;
 
-	const LONG MIN_CHAR_IN_CELL_LINE = 2;
+	const LONG MIN_CHAR_IN_CELL_LINE = 3;
 	const LONG MIN_LINES_IN_CELL = 1;
 	
 	int rows_ = 0;
@@ -50,9 +62,18 @@ private:
 
 	void draw(int rows, int columns);
 
-	int * getTextHeights(int rows, int columns, int xStep, HDC wndDC, RECT clientRect, WCHAR ** strings);
+	int* getTextHeights(int rows, int columns, int xStep, HDC wndDC, RECT clientRect, WCHAR** strings);
 
-	void paintTable(int rows, int columns, int xStep, int * ySteps, HDC wndDC, WCHAR ** strings);
+	void paintTable(int rows, int columns, int xStep, int* ySteps, HDC wndDC, WCHAR** strings);
 
 	void destoy();
+
+	void processStrings(std::vector<std::wstring> strings);
+
+	std::wstring deleteExtraDelimiters(const std::wstring s, wchar_t delimiter);
+
+	std::vector<std::wstring> split(const std::wstring stringToSplit, wchar_t delimiter);
+
+	WCHAR** toWcharArray(std::vector<std::wstring> strings);
+
 };

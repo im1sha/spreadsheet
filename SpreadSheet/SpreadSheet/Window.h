@@ -7,8 +7,6 @@
 #include "GraphicDefines.h"
 #include "SpreadSheet.h"
 #include <string>
-#include <iostream>
-#include <sstream>
 #include <vector>
 #include <fstream>
 
@@ -33,6 +31,8 @@ private:
 	HWND editRowshWnd_ = nullptr;
 	HWND editColumnshWnd_ = nullptr;
 	HWND buttonhWnd_ = nullptr;
+
+	const POINT DEFAULT_WINDOW_WIDTH_HEIGHT = { 1700, 900 };
 
 	// child windows default positions 
 	const RECT EDIT_ROWS_DEFAULT_POSITION = { 10, 10, 200, 20 };
@@ -59,4 +59,5 @@ private:
 	bool processCreateChildItemsRequest();
 
 	bool loadStringsFromFile();
+
 };

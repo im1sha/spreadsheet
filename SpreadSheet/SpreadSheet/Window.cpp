@@ -53,7 +53,7 @@ HWND Window::initialize(HINSTANCE hInstance, int nCmdShow)
 	WNDCLASSEX wndClassEx = { };
 	registerClass(wndClassEx, hInstance, Window::windowProc);
 	HWND hWnd = CreateWindow(DEFAULT_CLASS_NAME, DEFAULT_WINDOW_NAME, WS_OVERLAPPEDWINDOW | WS_HSCROLL | WS_VSCROLL,
-		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, nullptr, nullptr, hInstance, 0);
+		100, 100, DEFAULT_WINDOW_WIDTH_HEIGHT.x, DEFAULT_WINDOW_WIDTH_HEIGHT.y, HWND_DESKTOP, nullptr, hInstance, 0);
 
 	// save a reference to the current Window instance 
 	SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR)this);
@@ -104,12 +104,24 @@ LRESULT CALLBACK Window::windowProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 		if (window != nullptr)
 		{
 			window->processCreateChildItemsRequest();
+		
+			// FOR DEBUGGING ONLY
+			window->loadStringsFromFile();
+			PostMessage(hWnd, WM_COMMAND, window->DEFAULT_BUTTON_NO, 0);
+			// ------------------
 		}
-		// FOR DEBUGGING ONLY
-		window->loadStringsFromFile();
-		PostMessage(hWnd, WM_COMMAND, window->DEFAULT_BUTTON_NO, 0);
-		//
 		break;
+	}
+	case WM_GETMINMAXINFO:
+	{
+		if ((s != nullptr) && (s->areDimensionsSet()))
+		{
+			MINMAXINFO* m = (MINMAXINFO*)lParam;
+			POINT minDimensions = s->getMinWidthAndHeight();
+			m->ptMinTrackSize.x = minDimensions.x;
+			m->ptMinTrackSize.y = minDimensions.y;
+		}
+		return 0;
 	}
 	case WM_COMMAND:
 	{
@@ -198,11 +210,10 @@ bool Window::processShowSpreadsheetRequest(LPARAM lParam)
 		if (wrongInput)
 		{
 			MessageBox(hWnd, L"Incorrect values", L"Attention", MB_OK);
-			
 		}
 		else // create table if input is correct
 		{
-			s->initialize(rows, columns, lParam);
+			s->initialize(rows, columns, tableData_, lParam);
 
 			DestroyWindow(this->editRowshWnd_);
 			DestroyWindow(this->editColumnshWnd_);
@@ -212,6 +223,9 @@ bool Window::processShowSpreadsheetRequest(LPARAM lParam)
 			result = true;
 		}
 	}
+
+	free(rowsInput);
+	free(columnsInput);
 
 	return result;
 }
@@ -227,7 +241,7 @@ bool Window::processCreateChildItemsRequest()
 	{
 		// creating child windows 
 		this->editRowshWnd_ =
-			CreateWindow(L"EDIT", L"9",
+			CreateWindow(L"EDIT", L"6",
 				this->DEFAULT_CHILD_STYLE,
 				this->EDIT_ROWS_DEFAULT_POSITION.left,
 				this->EDIT_ROWS_DEFAULT_POSITION.top,
@@ -260,8 +274,9 @@ bool Window::processCreateChildItemsRequest()
 
 bool Window::loadStringsFromFile()
 {
-	WCHAR fileName[MAX_PATH] = { };
+	WCHAR fileName[MAX_PATH] = L"C:\\Users\\Foxx\\Desktop\\1.txt";
 
+	/*
 	OPENFILENAME openFileName;
 	openFileName.lStructSize = sizeof(OPENFILENAME);
 	openFileName.hwndOwner = hWnd_;
@@ -278,25 +293,32 @@ bool Window::loadStringsFromFile()
 	openFileName.lpstrDefExt = nullptr;
 
 	bool sucessful = GetOpenFileName(&openFileName);
-	if (sucessful)
+	*/
+	if (true/*sucessful*/)
 	{	
-		std::wifstream stream(fileName, std::ios::binary);
+		std::wifstream stream(fileName, std::wios::binary);
 		std::wstring line;                                          
 
 		if (stream.is_open())
 		{
-			while (std::getline(stream, line))                           
+			size_t maxCells = SpreadSheet::MAX_STRINGS;
+			for (size_t i = 0; i < maxCells; i++)
 			{
-				tableData_.push_back(line);                                   
+				if (std::getline(stream, line))
+				{
+					tableData_.push_back(line);
+				}
+				else 
+				{
+					break;
+				}		                                  
 			}	
 			stream.close();
 		}
 		else 
 		{
-			sucessful = false;
+			//sucessful = false;
 		}
 	}
-	return sucessful;
+	return true;// sucessful;
 }
-
-
