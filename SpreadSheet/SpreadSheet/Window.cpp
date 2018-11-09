@@ -114,13 +114,13 @@ LRESULT CALLBACK Window::windowProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 	}
 	case WM_GETMINMAXINFO:
 	{
-		/*if ((s != nullptr) && (s->areDimensionsSet()))
+		if ((s != nullptr) && (s->areDimensionsSet()))
 		{
 			MINMAXINFO* m = (MINMAXINFO*)lParam;
 			POINT minDimensions = s->getMinWidthAndHeight();
 			m->ptMinTrackSize.x = minDimensions.x;
 			m->ptMinTrackSize.y = minDimensions.y;
-		}*/
+		}
 		return 0;
 	}
 	case WM_COMMAND:

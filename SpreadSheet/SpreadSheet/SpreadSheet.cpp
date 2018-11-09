@@ -53,9 +53,6 @@ void SpreadSheet::initialize(int rows, int columns, std::vector<std::wstring> st
 		}
 	}
 
-	minDisplayedHeight_ = charHeight_;
-	minDisplayedWidth_ = columns_ * minColumnWidth_;
-
 	isInitialized_ = true;
 
 	//resize(lParam);
@@ -142,7 +139,7 @@ void SpreadSheet::processStrings(std::vector<std::wstring> strings)
 
 		for (size_t i = 0; i < words.size(); i++)
 		{
-			int charsInWord = words[i].size();
+			int charsInWord = (int)words[i].size();
 			totalChars.push_back(charsInWord);
 			totalLenght.push_back(charsInWord * charWidth_);
 		}
@@ -160,7 +157,6 @@ void SpreadSheet::update()
 		draw(rows_, columns_);
 	}
 }
-
 
 // ~
 void SpreadSheet::resize(LPARAM lParam)
@@ -202,8 +198,8 @@ void SpreadSheet::draw(int rows, int columns)
 		ps.fErase = true,
 		ps.rcPaint = clientRect
 	};
-	HPEN hPen = CreatePen(PS_SOLID, 1, RGB(0, 0, 0));
-	HPEN hOldPen = (HPEN)SelectObject(wndDC, hPen);
+	HPEN hPen_ = CreatePen(PS_SOLID, 1, RGB(0, 0, 0));
+	HPEN hOldPen = (HPEN)SelectObject(wndDC, hPen_);
 	BeginPaint(hWnd_, &ps);
 	int oldBackgroung = SetBkMode(wndDC, TRANSPARENT);
 
@@ -245,18 +241,19 @@ void SpreadSheet::draw(int rows, int columns)
 		{
 			ySteps[i] = textHeights[i] + (clientRect.bottom - clientRect.top - fullTextHeight) / rows;
 		}
+		ySteps[ySteps.size() - 1] += (clientRect.bottom - clientRect.top - fullTextHeight) % rows;
 	}
 	else 
 	{
 		ySteps = textHeights;
 	}
 
-	paintTable(rows, columns, xStep, ySteps, textHeights, wndDC, tableStrings_);
+	paintTable(rows, columns, xStep, ySteps, clientRect.right - clientRect.left, textHeights, wndDC, tableStrings_);
 
 	// defaults restoring
 	SetBkMode(wndDC, oldBackgroung);
 	EndPaint(hWnd_, &ps);
-	DeleteObject(hPen);	
+	DeleteObject(hPen_);	
 	SelectObject(wndDC, hOldPen);
 	ReleaseDC(hWnd_, wndDC);
 }
@@ -386,13 +383,14 @@ std::vector<int> SpreadSheet::getTextHeights(std::vector<std::vector<int> > leng
 }
 
 //
-void SpreadSheet::paintTable(int rows, int columns, int xStep, std::vector<int> ySteps, std::vector<int> textHeights, HDC wndDC, WCHAR** strings)
+void SpreadSheet::paintTable(int rows, int columns, int xStep, std::vector<int> ySteps, int totalWidth, std::vector<int> textHeights, HDC wndDC, WCHAR** strings)
 {
 	int currentBottom = 0;
+	
 	for (size_t j = 0; j < rows; j++)
 	{
 		int yStep = ySteps[j];
-		currentBottom += yStep;
+		currentBottom +=  yStep;
 		for (size_t i = 0; i < columns; i++)
 		{
 			WCHAR* textToPrint = strings[j * columns + i];
@@ -419,6 +417,15 @@ void SpreadSheet::paintTable(int rows, int columns, int xStep, std::vector<int> 
 				&textRect, DT_CENTER | DT_WORDBREAK | DT_EDITCONTROL);
 		}
 	}
+
+	// fill area to the right of the table
+	Rectangle(
+		wndDC,
+		(LONG)(xStep * columns),
+		(LONG) 0,
+		(LONG)(xStep * columns + totalWidth % xStep + 1),
+		(LONG)currentBottom + 1
+	);
 }
 
 int SpreadSheet::getMaxLinesInRow(std::vector<std::vector<int> > lengths, int lineWidth)
