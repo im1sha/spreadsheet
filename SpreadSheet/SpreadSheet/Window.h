@@ -20,9 +20,9 @@ public:
 	int messageLoop();
 
 private:
-	HWND hWnd_ = nullptr; // related HWND
-	HINSTANCE hInstance_ = nullptr;
-	HDC hDc_ = nullptr; // device context
+	HWND hWnd_ = nullptr;			// related HWND
+	HINSTANCE hInstance_ = nullptr; // current instance handle
+	HDC hDC_ = nullptr;				// device context
 
 	// values which identify hWnd_ 
 	const WCHAR DEFAULT_CLASS_NAME[20] = L"SpreadSheetClass";
@@ -44,14 +44,15 @@ private:
 
 	const LONG DEFAULT_CHILD_STYLE = WS_BORDER | WS_CHILD | WS_VISIBLE;
 
-	const int DEFAULT_OK_NO = 1; // button OK command LOWORD(wParam) value
-	const int DEFAULT_LOAD_NO = 2; // button LOAD command LOWORD(wParam) value
+	const int DEFAULT_OK_NO = 1;	// button OK command LOWORD(wParam) value
+	const int DEFAULT_LOAD_NO = 2;	// button LOAD command LOWORD(wParam) value
 
 	const int MAX_TEXT_LENGTH = 20;
 
 	const std::wstring DEFAULT_FONT = L"futuralightc";
 	HGDIOBJ hPreviousFont_ = nullptr;
-
+	HFONT hFont_ = nullptr;
+	const int DEFAULT_FONT_SIZE = 15;
 
 	int totalStrings = 0;
 

@@ -32,6 +32,17 @@ Window::~Window()
 	{
 		delete spreadSheet_;
 	}
+
+	//// font restoring
+	//if (hDC_ != nullptr && hPreviousFont_ != nullptr)
+	//{
+	//	SelectObject(hDC_, hPreviousFont_);
+	//	if (hFont_ != nullptr)
+	//	{
+	//		DeleteObject(hFont_);
+	//	}
+	//}
+	
 }
 
 int Window::messageLoop()
@@ -113,7 +124,7 @@ LRESULT CALLBACK Window::windowProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 	switch (message)
 	{
 	case WM_CREATE:
-	{
+	{		
 		DefWindowProc(hWnd, message, wParam, lParam);
 		PostMessage(hWnd, WM_CREATE_CHILD_ITEMS, 0, 0);
 		break;
@@ -121,38 +132,19 @@ LRESULT CALLBACK Window::windowProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 	case WM_CREATE_CHILD_ITEMS:
 	{		
 		if (window != nullptr)
-		{
-
-			/*
-			HFONT hFont = CreateFont(15, NULL, NULL, NULL, 
-				FW_NORMAL, FALSE, FALSE, FALSE, 
-				DEFAULT_CHARSET, OUT_TT_ONLY_PRECIS,
-				CLIP_DEFAULT_PRECIS, NONANTIALIASED_QUALITY, 
-				DEFAULT_PITCH | FF_SWISS, window->DEFAULT_FONT.c_str());
-
-			window->hPreviousFont_ = SelectObject(hdc, hFont);
-			*/
-
-
-			/*
-			PAINTSTRUCT ps;
-			HDC hdc = BeginPaint(hwnd, &ps);
-
-			RECT rect;
-			GetClientRect(hwnd, &rect);
-
-			HFONT hFont = CreateFont(15, NULL, NULL, NULL, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_TT_ONLY_PRECIS,
-				CLIP_DEFAULT_PRECIS, NONANTIALIASED_QUALITY, DEFAULT_PITCH | FF_SWISS, FONT_NAME.c_str());
-			HGDIOBJ hLastFont = SelectObject(hdc, hFont);
-
-			pTable->draw(hdc, rect);
-			SelectObject(hdc, hLastFont);
-			DeleteObject(hFont);
-			EndPaint(hwnd, &ps);
-			break;
-			*/
+		{	
+			//// set font
+			//window->hDC_ = GetDC(hWnd);
+			//window->hFont_ = CreateFont(window->DEFAULT_FONT_SIZE, NULL, NULL, NULL,
+			//	FW_NORMAL, FALSE, FALSE, FALSE,
+			//	DEFAULT_CHARSET, OUT_TT_ONLY_PRECIS,
+			//	CLIP_DEFAULT_PRECIS, NONANTIALIASED_QUALITY,
+			//	DEFAULT_PITCH | FF_SWISS, window->DEFAULT_FONT.c_str());
+			//window->hPreviousFont_ = SelectObject(window->hDC_, window->hFont_);		
+			//ReleaseDC(hWnd, window->hDC_);
 
 			window->processCreateChildItemsRequest();
+			
 			window->loadStringsFromFile();
 		}
 		break;
@@ -175,8 +167,7 @@ LRESULT CALLBACK Window::windowProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 			if (LOWORD(wParam) == window->DEFAULT_OK_NO)
 			{
 				if (window->tableData_.size() != 0)
-				{
-					
+				{					
 					window->processShowSpreadsheetRequest(lParam);
 				}
 				else 
