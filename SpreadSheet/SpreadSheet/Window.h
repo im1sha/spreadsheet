@@ -49,27 +49,18 @@ private:
 
 	const int MAX_TEXT_LENGTH = 20;
 
-	const std::wstring DEFAULT_FONT = L"futuralightc";
-	HGDIOBJ hPreviousFont_ = nullptr;
-	HFONT hFont_ = nullptr;
-	const int DEFAULT_FONT_SIZE = 15;
-
-	int totalStrings = 0;
-
-	std::vector<std::wstring> tableData_;
-
 	SpreadSheet* spreadSheet_ = nullptr;
+	int totalStrings = 0;
+	std::vector<std::wstring> tableData_;
 
 	bool correctTableData();
 
 	HWND initialize(HINSTANCE hInstance, int nCmdShow);
 
 	ATOM registerClass(WNDCLASSEX wndClassEx, HINSTANCE hInstance, WNDPROC wndProc);
-
 	static LRESULT CALLBACK windowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 	bool processShowSpreadsheetRequest(LPARAM lParam);
-
 	bool processCreateChildItemsRequest();
 
 	bool loadStringsFromFile();

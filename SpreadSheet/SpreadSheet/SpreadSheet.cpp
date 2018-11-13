@@ -9,11 +9,36 @@ SpreadSheet::SpreadSheet(HWND hWnd)
 
 SpreadSheet::~SpreadSheet()
 {
-	this->destoy();
+	this->freeTableContent();
 }
 
-void SpreadSheet::destoy()
+void SpreadSheet::freeTableContent()
 {
+	// restoring previous graphical settings
+	HDC wndDC = GetDC(hWnd_);
+
+	if (hDC_ != nullptr && hPreviousFont_ != nullptr)
+	{
+		SelectObject(hDC_, hPreviousFont_);
+		if (hFont_ != nullptr)
+		{
+			DeleteObject(hFont_);
+		}
+	}
+	
+	SetBkMode(wndDC, oldBackground_);
+
+	if (hOldPen_ != nullptr && wndDC != nullptr)
+	{
+		SelectObject(wndDC, hOldPen_);
+		if (hPen_ != nullptr)
+		{
+			DeleteObject(hPen_);
+		}
+	}
+	
+	ReleaseDC(hWnd_, wndDC);
+
 	if (tableStrings_ != nullptr)
 	{
 		for (size_t i = 0; i < MAX_STRINGS; i++)
@@ -32,15 +57,33 @@ void SpreadSheet::initialize(int rows, int columns, std::vector<std::wstring> st
 	rows_ = rows;
 	columns_ = columns;
 
-	HDC hdc = GetDC(hWnd_);
-	TEXTMETRIC tm;
-	GetTextMetrics(hdc, &tm);
-	ReleaseDC(hWnd_, hdc);
+	HDC wndDC = GetDC(hWnd_);
+	hPen_ = CreatePen(PS_SOLID, 1, RGB(255, 0, 255));
+	hOldPen_ = (HPEN)SelectObject(wndDC, hPen_);
+	oldBackground_ = SetBkMode(wndDC, TRANSPARENT);
 
-	charWidth_ = ( tm.tmMaxCharWidth + tm.tmAveCharWidth) / 2;
+	// set font
+	hFont_ = CreateFont(DEFAULT_FONT_SIZE, NULL, NULL, NULL,
+		FW_NORMAL, FALSE, FALSE, FALSE,
+		DEFAULT_CHARSET, OUT_TT_ONLY_PRECIS,
+		CLIP_DEFAULT_PRECIS, NONANTIALIASED_QUALITY,
+		DEFAULT_PITCH | FF_SWISS, DEFAULT_FONT.c_str());
+
+	hPreviousFont_ = SelectObject(wndDC, hFont_);
+
+	TEXTMETRIC tm = {};
+	GetTextMetrics(wndDC, &tm);
+
+	//charWidth_ = tm.tmAveCharWidth + sqrt(tm.tmMaxCharWidth);
 	charHeight_ = tm.tmHeight + tm.tmExternalLeading;
-	
-	processStrings(strings);
+
+	tagSIZE spaceSize = {};
+	GetTextExtentPoint32(wndDC, L" ", 1, &spaceSize);
+	spaceWidth_ = spaceSize.cx;
+
+	ReleaseDC(hWnd_, wndDC);
+
+	processStrings(strings); << correct it
 
 	for (size_t i = 0; i < wordsLenghts_.size(); i++)
 	{
@@ -48,7 +91,7 @@ void SpreadSheet::initialize(int rows, int columns, std::vector<std::wstring> st
 		{
 			if (wordsLenghts_[i][j] > minColumnWidth_)
 			{
-				minColumnWidth_ = wordsLenghts_[i][j] + charWidth_;
+				minColumnWidth_ = wordsLenghts_[i][j] + tm.tmAveCharWidth;
 			}
 		}
 	}
@@ -129,25 +172,40 @@ POINT SpreadSheet::getMinWidthAndHeight()
 
 void SpreadSheet::processStrings(std::vector<std::wstring> strings)
 {
+	HDC wndDC = GetDC(hWnd_);
+
 	for (size_t i = 0; i < strings.size(); i++)
 	{
 		strings[i] = deleteExtraDelimiters(strings[i], ' ');
 		std::vector<std::wstring> words = split(strings[i], ' ');
+		wchar_t** wcharWords = toWcharArray(words);
 
-		std::vector<int> totalChars;
 		std::vector<int> totalLenght;
+		tagSIZE stringSize = {};
 
-		for (size_t i = 0; i < words.size(); i++)
+		for (size_t j = 0; j < words.size(); j++)
 		{
-			int charsInWord = (int)words[i].size();
-			totalChars.push_back(charsInWord);
-			totalLenght.push_back(charsInWord * charWidth_);
+			GetTextExtentPoint32(wndDC, wcharWords[j], words.size(), &stringSize);
+			totalLenght.push_back(stringSize.cx);
 		}
 
-		charsInWords_.push_back(totalChars);
+		if (wcharWords != nullptr)
+		{
+			for (size_t j = 0; j < words.size(); j++)
+			{
+				if (wcharWords[j] != nullptr)
+				{
+					free(wcharWords[j]);
+				}
+			}
+			free(wcharWords);
+		}
+
 		wordsLenghts_.push_back(totalLenght);
 	}
 	tableStrings_ = toWcharArray(strings);
+
+	ReleaseDC(hWnd_, wndDC);
 }
 
 void SpreadSheet::update()
@@ -159,50 +217,53 @@ void SpreadSheet::update()
 }
 
 // ~
-void SpreadSheet::resize(LPARAM lParam)
-{
-	if (isInitialized_)
-	{
-		SCROLLINFO si;
-		WORD xClient = LOWORD(lParam);
-		WORD yClient = HIWORD(lParam);
+//void SpreadSheet::resize(LPARAM lParam)
+//{
+//	if (isInitialized_)
+//	{
+//		SCROLLINFO si;
+//		WORD xClient = LOWORD(lParam);
+//		WORD yClient = HIWORD(lParam);
+//
+//		// Set the scrolling ranges and page sizes
+//		si.cbSize = sizeof(si);
+//		si.fMask = SIF_RANGE | SIF_PAGE;
+//		si.nMin = 0;
+//		si.nMax = yClient / charHeight_;
+//		si.nPage = yClient / charHeight_;
+//		SetScrollInfo(hWnd_, SB_VERT, &si, TRUE);
+//
+//		si.cbSize = sizeof(si);
+//		si.fMask = SIF_RANGE | SIF_PAGE;
+//		si.nMin = 0;
+//		si.nMax = xClient / charWidth_;
+//		si.nPage = xClient / charWidth_;
+//		SetScrollInfo(hWnd_, SB_HORZ, &si, TRUE);
+//
+//		draw(rows_, columns_);
+//	}
+//}
 
-		// Set the scrolling ranges and page sizes
-		si.cbSize = sizeof(si);
-		si.fMask = SIF_RANGE | SIF_PAGE;
-		si.nMin = 0;
-		si.nMax = yClient / charHeight_;
-		si.nPage = yClient / charHeight_;
-		SetScrollInfo(hWnd_, SB_VERT, &si, TRUE);
-
-		si.cbSize = sizeof(si);
-		si.fMask = SIF_RANGE | SIF_PAGE;
-		si.nMin = 0;
-		si.nMax = xClient / charWidth_;
-		si.nPage = xClient / charWidth_;
-		SetScrollInfo(hWnd_, SB_HORZ, &si, TRUE);
-
-		draw(rows_, columns_);
-	}
-}
-
-// 
+// draws table and fill it with content
 void SpreadSheet::draw(int rows, int columns)
 {
 	// client window's data gathering
 	RECT clientRect;
 	GetClientRect(hWnd_, &clientRect);
+
 	HDC wndDC = GetDC(hWnd_);
+
 	tagPAINTSTRUCT ps {
 		ps.hdc = wndDC,
 		ps.fErase = true,
 		ps.rcPaint = clientRect
 	};
-	HPEN hPen_ = CreatePen(PS_SOLID, 1, RGB(0, 0, 0));
-	HPEN hOldPen = (HPEN)SelectObject(wndDC, hPen_);
+	
 	BeginPaint(hWnd_, &ps);
-	int oldBackgroung = SetBkMode(wndDC, TRANSPARENT);
 
+	SelectObject(wndDC, hPen_);	
+	SelectObject(wndDC, hFont_);
+	SetBkMode(wndDC, TRANSPARENT);
 
 	//------------------------------------
 
@@ -224,10 +285,8 @@ void SpreadSheet::draw(int rows, int columns)
 	// draw parameters calculating
 	int averageColumnWidth = (clientRect.right - clientRect.left) / columns;
 	int xStep = (averageColumnWidth < minColumnWidth_) ? minColumnWidth_ : averageColumnWidth;
-
 	
-	std::vector<int> textHeights = getTextHeights(wordsLenghts_, xStep, charHeight_);
-	
+	std::vector<int> textHeights = getTextHeights(wordsLenghts_, xStep, charHeight_);	
 
 	int fullTextHeight = 0;
 	for (size_t i = 0; i < rows; i++)
@@ -252,118 +311,114 @@ void SpreadSheet::draw(int rows, int columns)
 
 	paintTable(rows, columns, xStep, ySteps, clientRect.right - clientRect.left, textHeights, wndDC, tableStrings_);
 
-	// defaults restoring
-	SetBkMode(wndDC, oldBackgroung);
+	// draw ending
 	EndPaint(hWnd_, &ps);
-	DeleteObject(hPen_);	
-	SelectObject(wndDC, hOldPen);
 	ReleaseDC(hWnd_, wndDC);
 }
 
+// ~
+//void SpreadSheet::vScroll(WPARAM wParam)
+//{
+//	SCROLLINFO si;
+//
+//	si.cbSize = sizeof(si);
+//	si.fMask = SIF_ALL;
+//	GetScrollInfo(hWnd_, SB_VERT, &si);
+//
+//	int yPos = si.nPos;
+//	switch (LOWORD(wParam))
+//	{
+//	// clicked the HOME keyboard key.
+//	case SB_TOP:
+//		si.nPos = si.nMin;
+//		break;
+//	// clicked the END keyboard key.
+//	case SB_BOTTOM:
+//		si.nPos = si.nMax;
+//		break;
+//	// clicked the top arrow.
+//	case SB_LINEUP:
+//		si.nPos -= 1;
+//		break;
+//	// clicked the bottom arrow.
+//	case SB_LINEDOWN:
+//		si.nPos += 1;
+//		break;
+//	// clicked the scroll bar shaft above the scroll box.
+//	case SB_PAGEUP:
+//		si.nPos -= si.nPage;
+//		break;
+//	// clicked the scroll bar shaft below the scroll box.
+//	case SB_PAGEDOWN:
+//		si.nPos += si.nPage;
+//		break;
+//	// dragged the scroll box.
+//	case SB_THUMBTRACK:
+//		si.nPos = si.nTrackPos;
+//		break;
+//	default:
+//		break;
+//	}
+//
+//	si.fMask = SIF_POS;
+//	SetScrollInfo(hWnd_, SB_VERT, &si, TRUE);
+//	GetScrollInfo(hWnd_, SB_VERT, &si);
+//
+//	if (si.nPos != yPos)
+//	{
+//		ScrollWindow(hWnd_, 0, charHeight_ * (yPos - si.nPos), NULL, NULL); 
+//		UpdateWindow(hWnd_);
+//	}
+//
+//}
 
 // ~
-void SpreadSheet::vScroll(WPARAM wParam)
-{
-	SCROLLINFO si;
-
-	si.cbSize = sizeof(si);
-	si.fMask = SIF_ALL;
-	GetScrollInfo(hWnd_, SB_VERT, &si);
-
-	int yPos = si.nPos;
-	switch (LOWORD(wParam))
-	{
-	// clicked the HOME keyboard key.
-	case SB_TOP:
-		si.nPos = si.nMin;
-		break;
-	// clicked the END keyboard key.
-	case SB_BOTTOM:
-		si.nPos = si.nMax;
-		break;
-	// clicked the top arrow.
-	case SB_LINEUP:
-		si.nPos -= 1;
-		break;
-	// clicked the bottom arrow.
-	case SB_LINEDOWN:
-		si.nPos += 1;
-		break;
-	// clicked the scroll bar shaft above the scroll box.
-	case SB_PAGEUP:
-		si.nPos -= si.nPage;
-		break;
-	// clicked the scroll bar shaft below the scroll box.
-	case SB_PAGEDOWN:
-		si.nPos += si.nPage;
-		break;
-	// dragged the scroll box.
-	case SB_THUMBTRACK:
-		si.nPos = si.nTrackPos;
-		break;
-	default:
-		break;
-	}
-
-	si.fMask = SIF_POS;
-	SetScrollInfo(hWnd_, SB_VERT, &si, TRUE);
-	GetScrollInfo(hWnd_, SB_VERT, &si);
-
-	if (si.nPos != yPos)
-	{
-		ScrollWindow(hWnd_, 0, charHeight_ * (yPos - si.nPos), NULL, NULL); 
-		UpdateWindow(hWnd_);
-	}
-
-}
-
-// ~
-void SpreadSheet::hScroll(WPARAM wParam)
-{
-	SCROLLINFO si;
-	si.cbSize = sizeof(si);
-	si.fMask = SIF_ALL;
-
-	GetScrollInfo(hWnd_, SB_HORZ, &si);
-	int xPos = si.nPos;
-
-	switch (LOWORD(wParam))
-	{
-	// clicked the left arrow.
-	case SB_LINELEFT:
-		si.nPos -= 1;
-		break;
-	// clicked the right arrow.
-	case SB_LINERIGHT:
-		si.nPos += 1;
-		break;
-	// clicked the scroll bar shaft left of the scroll box.
-	case SB_PAGELEFT:
-		si.nPos -= si.nPage;
-		break;
-	// clicked the scroll bar shaft right of the scroll box.
-	case SB_PAGERIGHT:
-		si.nPos += si.nPage;
-		break;
-	// dragged the scroll box.
-	case SB_THUMBTRACK:
-		si.nPos = si.nTrackPos;
-		break;
-	default:
-		break;
-	}
-
-	si.fMask = SIF_POS;
-	SetScrollInfo(hWnd_, SB_HORZ, &si, TRUE);
-	GetScrollInfo(hWnd_, SB_HORZ, &si);
-
-	// if the position has changed scroll the window.
-	if (si.nPos != xPos)
-	{
-		ScrollWindow(hWnd_, charWidth_ * (xPos - si.nPos), 0, NULL, NULL); 
-		UpdateWindow(hWnd_);
-	}
-}
+//void SpreadSheet::hScroll(WPARAM wParam)
+//{
+//	SCROLLINFO si;
+//	si.cbSize = sizeof(si);
+//	si.fMask = SIF_ALL;
+//
+//	GetScrollInfo(hWnd_, SB_HORZ, &si);
+//	int xPos = si.nPos;
+//
+//	switch (LOWORD(wParam))
+//	{
+//	// clicked the left arrow.
+//	case SB_LINELEFT:
+//		si.nPos -= 1;
+//		break;
+//	// clicked the right arrow.
+//	case SB_LINERIGHT:
+//		si.nPos += 1;
+//		break;
+//	// clicked the scroll bar shaft left of the scroll box.
+//	case SB_PAGELEFT:
+//		si.nPos -= si.nPage;
+//		break;
+//	// clicked the scroll bar shaft right of the scroll box.
+//	case SB_PAGERIGHT:
+//		si.nPos += si.nPage;
+//		break;
+//	// dragged the scroll box.
+//	case SB_THUMBTRACK:
+//		si.nPos = si.nTrackPos;
+//		break;
+//	default:
+//		break;
+//	}
+//
+//	si.fMask = SIF_POS;
+//	SetScrollInfo(hWnd_, SB_HORZ, &si, TRUE);
+//	GetScrollInfo(hWnd_, SB_HORZ, &si);
+//
+//	// if the position has changed scroll the window.
+//	if (si.nPos != xPos)
+//	{
+//		ScrollWindow(hWnd_, charWidth_ * (xPos - si.nPos), 0, NULL, NULL); 
+//		UpdateWindow(hWnd_);
+//	}
+//}
 
 // Calculates max text height in row
 std::vector<int> SpreadSheet::getTextHeights(std::vector<std::vector<int> > lengths, int lineWidth, int lineHeight)
@@ -442,7 +497,7 @@ int SpreadSheet::getMaxLinesInRow(std::vector<std::vector<int> > lengths, int li
 		int filledNow = 0;
 		for (size_t j = 0; j < lengths[i].size(); j++)
 		{
-			filledNow += charWidth_ + lengths[i][j]; // space + word 
+			filledNow += spaceWidth_ + lengths[i][j]; // space + word 
 			if (filledNow > lineWidth)
 			{
 				currentLines += 1;

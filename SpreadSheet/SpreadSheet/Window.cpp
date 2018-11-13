@@ -32,17 +32,6 @@ Window::~Window()
 	{
 		delete spreadSheet_;
 	}
-
-	//// font restoring
-	//if (hDC_ != nullptr && hPreviousFont_ != nullptr)
-	//{
-	//	SelectObject(hDC_, hPreviousFont_);
-	//	if (hFont_ != nullptr)
-	//	{
-	//		DeleteObject(hFont_);
-	//	}
-	//}
-	
 }
 
 int Window::messageLoop()
@@ -133,16 +122,6 @@ LRESULT CALLBACK Window::windowProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 	{		
 		if (window != nullptr)
 		{	
-			//// set font
-			//window->hDC_ = GetDC(hWnd);
-			//window->hFont_ = CreateFont(window->DEFAULT_FONT_SIZE, NULL, NULL, NULL,
-			//	FW_NORMAL, FALSE, FALSE, FALSE,
-			//	DEFAULT_CHARSET, OUT_TT_ONLY_PRECIS,
-			//	CLIP_DEFAULT_PRECIS, NONANTIALIASED_QUALITY,
-			//	DEFAULT_PITCH | FF_SWISS, window->DEFAULT_FONT.c_str());
-			//window->hPreviousFont_ = SelectObject(window->hDC_, window->hFont_);		
-			//ReleaseDC(hWnd, window->hDC_);
-
 			window->processCreateChildItemsRequest();
 			
 			window->loadStringsFromFile();
@@ -294,7 +273,7 @@ bool Window::processCreateChildItemsRequest()
 	{
 		// creating child windows 
 		this->editRowsHwnd_ =
-			CreateWindow(L"EDIT", L"6",
+			CreateWindow(L"EDIT", L"7",
 				this->DEFAULT_CHILD_STYLE,
 				this->EDIT_ROWS_DEFAULT_POSITION.left,
 				this->EDIT_ROWS_DEFAULT_POSITION.top,
@@ -303,7 +282,7 @@ bool Window::processCreateChildItemsRequest()
 				this->hWnd_, nullptr, nullptr, nullptr
 			);
 		this->editColumnsHwnd_ =
-			CreateWindow(L"EDIT", L"9",
+			CreateWindow(L"EDIT", L"5",
 				this->DEFAULT_CHILD_STYLE,
 				this->EDIT_COLUMNS_DEFAULT_POSITION.left,
 				this->EDIT_COLUMNS_DEFAULT_POSITION.top,
@@ -336,7 +315,7 @@ bool Window::processCreateChildItemsRequest()
 
 bool Window::loadStringsFromFile()
 {
-	WCHAR fileName[MAX_PATH] = L"C:\\Users\\%USERNAME%\\Desktop\\1.txt";
+	WCHAR fileName[MAX_PATH] = {};
 
 	OPENFILENAME openFileName;
 	openFileName.lStructSize = sizeof(OPENFILENAME);
@@ -387,3 +366,23 @@ bool Window::loadStringsFromFile()
 	return sucessful;
 }
 
+
+
+//// set font
+//window->hDC_ = GetDC(hWnd);
+//window->hFont_ = CreateFont(window->DEFAULT_FONT_SIZE, NULL, NULL, NULL,
+//	FW_NORMAL, FALSE, FALSE, FALSE,
+//	DEFAULT_CHARSET, OUT_TT_ONLY_PRECIS,
+//	CLIP_DEFAULT_PRECIS, NONANTIALIASED_QUALITY,
+//	DEFAULT_PITCH | FF_SWISS, window->DEFAULT_FONT.c_str());
+//window->hPreviousFont_ = SelectObject(window->hDC_, window->hFont_);		
+//ReleaseDC(hWnd, window->hDC_);
+//// font restoring
+//if (hDC_ != nullptr && hPreviousFont_ != nullptr)
+//{
+//	SelectObject(hDC_, hPreviousFont_);
+//	if (hFont_ != nullptr)
+//	{
+//		DeleteObject(hFont_);
+//	}
+//}

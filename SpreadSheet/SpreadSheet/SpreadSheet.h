@@ -9,6 +9,7 @@
 #include <sstream>
 #include <vector>
 #include <iostream>
+#include <math.h>
 
 class SpreadSheet {
 public:
@@ -24,24 +25,21 @@ public:
 	void resize(LPARAM lParam);
 
 	void hScroll(WPARAM wParam);
-
 	void vScroll(WPARAM wParam);
 
 	void update();
-
 	void initialize(int rows, int columns, std::vector<std::wstring> strings, LPARAM lParam);
 	
 	bool areDimensionsSet();
-
 	POINT getMinWidthAndHeight();
 
 private:
 
 	WCHAR** tableStrings_ = nullptr;
-	std::vector<std::vector<int> > charsInWords_;
+	//std::vector<std::vector<int> > charsInWords_;
 	std::vector<std::vector<int> > wordsLenghts_;
 	
-	LONG charWidth_ = 0;
+	//LONG charWidth_ = 0;
 	LONG charHeight_ = 0;
 
 	LONG minColumnWidth_ = 0;
@@ -58,7 +56,19 @@ private:
 	bool isInitialized_ = false;
 
 	HWND hWnd_ = nullptr; // associated HWND
-	HDC hDc_ = nullptr; // device context
+	HDC hDC_ = nullptr; // device context
+
+	// font section
+	const std::wstring DEFAULT_FONT = L"futuralightc";
+	HGDIOBJ hPreviousFont_ = nullptr;
+	HFONT hFont_ = nullptr;
+	const int DEFAULT_FONT_SIZE = 20;
+
+	HPEN hPen_ = nullptr;
+	HPEN hOldPen_ = nullptr;
+	int oldBackground_;
+
+	int spaceWidth_;
 
 	void draw(int rows, int columns);
 
@@ -68,7 +78,7 @@ private:
 
 	int getMaxLinesInRow(std::vector<std::vector<int>> lengths, int lineWidth);
 
-	void destoy();
+	void freeTableContent();
 
 	void processStrings(std::vector<std::wstring> strings);
 
