@@ -33,6 +33,8 @@ public:
 	bool areDimensionsSet();
 	POINT getMinWidthAndHeight();
 
+	
+
 private:
 
 	WCHAR** tableStrings_ = nullptr;
@@ -40,12 +42,14 @@ private:
 	std::vector<std::vector<int> > wordsLenghts_;
 	
 	//LONG charWidth_ = 0;
-	LONG charHeight_ = 0;
+
+	LONG lineHeight_ = 0;
 
 	LONG minColumnWidth_ = 0;
+	LONG firstRowHeight_ = 0;
 
-	LONG minDisplayedWidth_ = 320;
-	LONG minDisplayedHeight_ = 240;
+	//LONG minDisplayedWidth_ = 320;
+	//LONG minDisplayedHeight_ = 240;
 
 	const LONG MIN_CHAR_IN_CELL_LINE = 3;
 	const LONG MIN_LINES_IN_CELL = 1;
@@ -62,23 +66,25 @@ private:
 	const std::wstring DEFAULT_FONT = L"futuralightc";
 	HGDIOBJ hPreviousFont_ = nullptr;
 	HFONT hFont_ = nullptr;
-	const int DEFAULT_FONT_SIZE = 20;
+	const int DEFAULT_FONT_SIZE = 16;
 
 	HPEN hPen_ = nullptr;
 	HPEN hOldPen_ = nullptr;
 	int oldBackground_;
 
-	int spaceWidth_;
+	int spaceWidth_ = 0;
 
 	void draw(int rows, int columns);
 
 	std::vector<int> getTextHeights(std::vector<std::vector<int> > lengths,  int lineWidth, int charHeight);
 
-	void paintTable(int rows, int columns, int xStep, std::vector<int> ySteps, int totalWidth, std::vector<int> textHeights, HDC wndDC, WCHAR** strings);
+	void paintTable(int rows, int columns, int xStep, std::vector<int> ySteps, int totalWidth, std::vector<int> textHeights, WCHAR** strings, HDC wndDC);
 
 	int getMaxLinesInRow(std::vector<std::vector<int>> lengths, int lineWidth);
 
-	void freeTableContent();
+	void deinitialize();
+
+	void freeWcharStringArray(wchar_t ** arrayToFree, size_t length);
 
 	void processStrings(std::vector<std::wstring> strings);
 
@@ -87,5 +93,4 @@ private:
 	std::vector<std::wstring> split(const std::wstring stringToSplit, wchar_t delimiter);
 
 	WCHAR** toWcharArray(std::vector<std::wstring> strings);
-
 };
