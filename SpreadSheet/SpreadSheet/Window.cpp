@@ -11,18 +11,22 @@ Window::Window(HINSTANCE hInstance, int nCmdShow)
 Window::~Window()
 {
 	// destroy child windows if they still exist
-	if (editRowshWnd_ != nullptr)
+	if (editRowsHwnd_ != nullptr)
 	{
-		DestroyWindow(editRowshWnd_);
+		DestroyWindow(editRowsHwnd_);
 	}
-	if (editColumnshWnd_ != nullptr)
+	if (editColumnsHwnd_ != nullptr)
 	{
-		DestroyWindow(editColumnshWnd_);
+		DestroyWindow(editColumnsHwnd_);
 	}
-	if (buttonhWnd_ != nullptr)
+	if (buttonOkHwnd_ != nullptr)
 	{
-		DestroyWindow(buttonhWnd_);
+		DestroyWindow(buttonOkHwnd_);
 	}	
+	if (buttonLoadHwnd_ != nullptr)
+	{
+		DestroyWindow(buttonLoadHwnd_);
+	}
 
 	if (spreadSheet_ != nullptr)
 	{
@@ -46,6 +50,21 @@ int Window::messageLoop()
 	}
 
 	return (int)msg.wParam;
+}
+
+bool Window::correctTableData()
+{
+	int linesToPush = this->totalStrings - tableData_.size();
+
+	if (linesToPush > 0)
+	{
+		for (size_t i = 0; i < linesToPush; i++)
+		{
+			tableData_.push_back(L"");
+		}
+	}
+
+	return true;
 }
 
 HWND Window::initialize(HINSTANCE hInstance, int nCmdShow)
@@ -103,12 +122,38 @@ LRESULT CALLBACK Window::windowProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 	{		
 		if (window != nullptr)
 		{
+
+			/*
+			HFONT hFont = CreateFont(15, NULL, NULL, NULL, 
+				FW_NORMAL, FALSE, FALSE, FALSE, 
+				DEFAULT_CHARSET, OUT_TT_ONLY_PRECIS,
+				CLIP_DEFAULT_PRECIS, NONANTIALIASED_QUALITY, 
+				DEFAULT_PITCH | FF_SWISS, window->DEFAULT_FONT.c_str());
+
+			window->hPreviousFont_ = SelectObject(hdc, hFont);
+			*/
+
+
+			/*
+			PAINTSTRUCT ps;
+			HDC hdc = BeginPaint(hwnd, &ps);
+
+			RECT rect;
+			GetClientRect(hwnd, &rect);
+
+			HFONT hFont = CreateFont(15, NULL, NULL, NULL, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_TT_ONLY_PRECIS,
+				CLIP_DEFAULT_PRECIS, NONANTIALIASED_QUALITY, DEFAULT_PITCH | FF_SWISS, FONT_NAME.c_str());
+			HGDIOBJ hLastFont = SelectObject(hdc, hFont);
+
+			pTable->draw(hdc, rect);
+			SelectObject(hdc, hLastFont);
+			DeleteObject(hFont);
+			EndPaint(hwnd, &ps);
+			break;
+			*/
+
 			window->processCreateChildItemsRequest();
-		
-			// FOR DEBUGGING ONLY
 			window->loadStringsFromFile();
-			PostMessage(hWnd, WM_COMMAND, window->DEFAULT_BUTTON_NO, 0);
-			// ------------------
 		}
 		break;
 	}
@@ -127,9 +172,21 @@ LRESULT CALLBACK Window::windowProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 	{
 		if (window != nullptr)
 		{
-			if (LOWORD(wParam) == window->DEFAULT_BUTTON_NO)
+			if (LOWORD(wParam) == window->DEFAULT_OK_NO)
 			{
-				window->processShowSpreadsheetRequest(lParam);
+				if (window->tableData_.size() != 0)
+				{
+					
+					window->processShowSpreadsheetRequest(lParam);
+				}
+				else 
+				{
+					MessageBox(hWnd, L"Empty file loaded", L"Attention", MB_OK);
+				}
+			}
+			if (LOWORD(wParam) == window->DEFAULT_LOAD_NO)
+			{				
+				window->loadStringsFromFile();								
 			}
 		}
 		break;
@@ -198,8 +255,8 @@ bool Window::processShowSpreadsheetRequest(LPARAM lParam)
 	WCHAR* columnsInput = (WCHAR*)calloc(this->MAX_TEXT_LENGTH, sizeof(WCHAR));
 
 	// get input from window
-	GetWindowText(this->editRowshWnd_, rowsInput, this->MAX_TEXT_LENGTH);
-	GetWindowText(this->editColumnshWnd_, columnsInput, this->MAX_TEXT_LENGTH);
+	GetWindowText(this->editRowsHwnd_, rowsInput, this->MAX_TEXT_LENGTH);
+	GetWindowText(this->editColumnsHwnd_, columnsInput, this->MAX_TEXT_LENGTH);
 
 	int rows = _wtoi(rowsInput);
 	int columns = _wtoi(columnsInput);
@@ -213,11 +270,15 @@ bool Window::processShowSpreadsheetRequest(LPARAM lParam)
 		}
 		else // create table if input is correct
 		{
+			this->totalStrings = rows * columns;
+			this->correctTableData();
+
 			s->initialize(rows, columns, tableData_, lParam);
 
-			DestroyWindow(this->editRowshWnd_);
-			DestroyWindow(this->editColumnshWnd_);
-			DestroyWindow(this->buttonhWnd_);
+			DestroyWindow(this->editRowsHwnd_);
+			DestroyWindow(this->editColumnsHwnd_);
+			DestroyWindow(this->buttonOkHwnd_);
+			DestroyWindow(this->buttonLoadHwnd_);
 
 			PostMessage(this->hWnd_, WM_LOAD_SPREADSHEET, 0, 0);
 			result = true;
@@ -233,14 +294,15 @@ bool Window::processShowSpreadsheetRequest(LPARAM lParam)
 bool Window::processCreateChildItemsRequest() 
 {	
 	bool result = 
-		(this->editRowshWnd_ == nullptr) &&
-		(this->editColumnshWnd_ == nullptr) &&
-		(this->buttonhWnd_ == nullptr);
+		(this->editRowsHwnd_ == nullptr) &&
+		(this->editColumnsHwnd_ == nullptr) &&
+		(this->buttonLoadHwnd_ == nullptr) &&
+		(this->buttonOkHwnd_ == nullptr);
 
 	if (result)
 	{
 		// creating child windows 
-		this->editRowshWnd_ =
+		this->editRowsHwnd_ =
 			CreateWindow(L"EDIT", L"6",
 				this->DEFAULT_CHILD_STYLE,
 				this->EDIT_ROWS_DEFAULT_POSITION.left,
@@ -249,7 +311,7 @@ bool Window::processCreateChildItemsRequest()
 				this->EDIT_ROWS_DEFAULT_POSITION.bottom,
 				this->hWnd_, nullptr, nullptr, nullptr
 			);
-		this->editColumnshWnd_ =
+		this->editColumnsHwnd_ =
 			CreateWindow(L"EDIT", L"9",
 				this->DEFAULT_CHILD_STYLE,
 				this->EDIT_COLUMNS_DEFAULT_POSITION.left,
@@ -258,14 +320,23 @@ bool Window::processCreateChildItemsRequest()
 				this->EDIT_COLUMNS_DEFAULT_POSITION.bottom,
 				this->hWnd_, nullptr, nullptr, nullptr
 			);
-		this->buttonhWnd_ =
-			CreateWindow(L"BUTTON", L"OK",
+		this->buttonOkHwnd_ =
+			CreateWindow(L"BUTTON", L"GENERATE TABLE",
 				this->DEFAULT_CHILD_STYLE,
 				this->BUTTON_OK_DEFAULT_POSITION.left,
 				this->BUTTON_OK_DEFAULT_POSITION.top,
 				this->BUTTON_OK_DEFAULT_POSITION.right,
 				this->BUTTON_OK_DEFAULT_POSITION.bottom,
-				this->hWnd_, (HMENU)(this->DEFAULT_BUTTON_NO), nullptr, nullptr
+				this->hWnd_, (HMENU)(this->DEFAULT_OK_NO), nullptr, nullptr
+			);
+		this->buttonLoadHwnd_ =
+			CreateWindow(L"BUTTON", L"LOAD FILE",
+				this->DEFAULT_CHILD_STYLE,
+				this->BUTTON_LOAD_DEFAULT_POSITION.left,
+				this->BUTTON_LOAD_DEFAULT_POSITION.top,
+				this->BUTTON_LOAD_DEFAULT_POSITION.right,
+				this->BUTTON_LOAD_DEFAULT_POSITION.bottom,
+				this->hWnd_, (HMENU)(this->DEFAULT_LOAD_NO), nullptr, nullptr
 			);
 	}
 
@@ -274,9 +345,8 @@ bool Window::processCreateChildItemsRequest()
 
 bool Window::loadStringsFromFile()
 {
-	WCHAR fileName[MAX_PATH] = L"C:\\Users\\Foxx\\Desktop\\1.txt";
+	WCHAR fileName[MAX_PATH] = L"C:\\Users\\%USERNAME%\\Desktop\\1.txt";
 
-	/*
 	OPENFILENAME openFileName;
 	openFileName.lStructSize = sizeof(OPENFILENAME);
 	openFileName.hwndOwner = hWnd_;
@@ -293,9 +363,10 @@ bool Window::loadStringsFromFile()
 	openFileName.lpstrDefExt = nullptr;
 
 	bool sucessful = GetOpenFileName(&openFileName);
-	*/
-	if (true/*sucessful*/)
+	
+	if (sucessful)
 	{	
+		tableData_.clear();
 		std::wifstream stream(fileName, std::wios::binary);
 		std::wstring line;                                          
 
@@ -317,9 +388,11 @@ bool Window::loadStringsFromFile()
 		}
 		else 
 		{
-			//sucessful = false;
+			sucessful = false;
 		}
 	}
-	return true;// sucessful;
+
+
+	return sucessful;
 }
 

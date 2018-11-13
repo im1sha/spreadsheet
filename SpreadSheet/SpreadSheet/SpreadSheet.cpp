@@ -225,7 +225,9 @@ void SpreadSheet::draw(int rows, int columns)
 	int averageColumnWidth = (clientRect.right - clientRect.left) / columns;
 	int xStep = (averageColumnWidth < minColumnWidth_) ? minColumnWidth_ : averageColumnWidth;
 
+	
 	std::vector<int> textHeights = getTextHeights(wordsLenghts_, xStep, charHeight_);
+	
 
 	int fullTextHeight = 0;
 	for (size_t i = 0; i < rows; i++)
@@ -367,18 +369,21 @@ void SpreadSheet::hScroll(WPARAM wParam)
 std::vector<int> SpreadSheet::getTextHeights(std::vector<std::vector<int> > lengths, int lineWidth, int lineHeight)
 {
 	std::vector<int> textHeights;
-
-	for (size_t i = 0; i < rows_; i++)
+	if (lengths.size() != 0)
 	{
-		std::vector<std::vector<int> >::const_iterator start = wordsLenghts_.begin() + i * columns_;
-		std::vector<std::vector<int> >::const_iterator end = wordsLenghts_.begin() + (i + 1) * columns_;
-		std::vector<std::vector<int> > rowValues(start, end);
-		textHeights.push_back(getMaxLinesInRow(rowValues, lineWidth));
+		for (size_t i = 0; i < rows_; i++)
+		{
+			std::vector<std::vector<int> >::const_iterator start = wordsLenghts_.begin() + i * columns_;
+			std::vector<std::vector<int> >::const_iterator end = wordsLenghts_.begin() + (i + 1) * columns_;
+			std::vector<std::vector<int> > rowValues(start, end);
+			textHeights.push_back(getMaxLinesInRow(rowValues, lineWidth));
+		}
+		for (size_t i = 0; i < textHeights.size(); i++)
+		{
+			textHeights[i] *= lineHeight;
+		}
 	}
-	for (size_t i = 0; i < textHeights.size(); i++)
-	{
-		textHeights[i] *= lineHeight;
-	}
+	
 	return textHeights;
 }
 

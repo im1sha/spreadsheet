@@ -22,31 +22,44 @@ public:
 private:
 	HWND hWnd_ = nullptr; // related HWND
 	HINSTANCE hInstance_ = nullptr;
+	HDC hDc_ = nullptr; // device context
 
 	// values which identify hWnd_ 
 	const WCHAR DEFAULT_CLASS_NAME[20] = L"SpreadSheetClass";
 	const WCHAR DEFAULT_WINDOW_NAME[15] = L"SpreadSheet";
 
 	// windows placed on hWnd_
-	HWND editRowshWnd_ = nullptr;
-	HWND editColumnshWnd_ = nullptr;
-	HWND buttonhWnd_ = nullptr;
-
+	HWND editRowsHwnd_ = nullptr;
+	HWND editColumnsHwnd_ = nullptr;
+	HWND buttonOkHwnd_ = nullptr;
+	HWND buttonLoadHwnd_ = nullptr;
+	 
 	const POINT DEFAULT_WINDOW_WIDTH_HEIGHT = { 1700, 900 };
 
 	// child windows default positions 
-	const RECT EDIT_ROWS_DEFAULT_POSITION = { 10, 10, 200, 20 };
-	const RECT EDIT_COLUMNS_DEFAULT_POSITION = { 10, 50, 200, 20 };
-	const RECT BUTTON_OK_DEFAULT_POSITION = { 10, 90, 50, 20 };
+	const RECT EDIT_ROWS_DEFAULT_POSITION = { 20, 20, 150, 20 };
+	const RECT EDIT_COLUMNS_DEFAULT_POSITION = { 20, 60, 150, 20 };
+	const RECT BUTTON_OK_DEFAULT_POSITION = { 20, 100, 150, 40 };
+	const RECT BUTTON_LOAD_DEFAULT_POSITION = { 20, 160, 150, 40 };
 
 	const LONG DEFAULT_CHILD_STYLE = WS_BORDER | WS_CHILD | WS_VISIBLE;
 
-	const int DEFAULT_BUTTON_NO = 1;
+	const int DEFAULT_OK_NO = 1; // button OK command LOWORD(wParam) value
+	const int DEFAULT_LOAD_NO = 2; // button LOAD command LOWORD(wParam) value
+
 	const int MAX_TEXT_LENGTH = 20;
+
+	const std::wstring DEFAULT_FONT = L"futuralightc";
+	HGDIOBJ hPreviousFont_ = nullptr;
+
+
+	int totalStrings = 0;
 
 	std::vector<std::wstring> tableData_;
 
 	SpreadSheet* spreadSheet_ = nullptr;
+
+	bool correctTableData();
 
 	HWND initialize(HINSTANCE hInstance, int nCmdShow);
 

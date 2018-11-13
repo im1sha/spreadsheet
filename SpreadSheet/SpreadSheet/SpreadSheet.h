@@ -58,6 +58,7 @@ private:
 	bool isInitialized_ = false;
 
 	HWND hWnd_ = nullptr; // associated HWND
+	HDC hDc_ = nullptr; // device context
 
 	void draw(int rows, int columns);
 
