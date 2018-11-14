@@ -19,6 +19,8 @@ void SpreadSheet::initialize(int rows, int columns, std::vector<std::wstring> st
 
 	HDC winDC = ::GetDC(hWnd_);
 
+	maxColumnWidth_ = ::GetSystemMetrics(SM_CXSCREEN) / columns_ / 3;
+
 	hPen_ = ::CreatePen(PS_SOLID, 1, RGB(200, 100, 200));
 	hOldPen_ = (HPEN) ::SelectObject(winDC, hPen_);
 
@@ -51,6 +53,10 @@ void SpreadSheet::initialize(int rows, int columns, std::vector<std::wstring> st
 				minColumnWidth_ = wordsLenghts_[i][j] + spaceWidth_;
 			}
 		}
+	}
+	if (minColumnWidth_ > maxColumnWidth_)
+	{
+		minColumnWidth_ = maxColumnWidth_;
 	}
 
 	isInitialized_ = true;
@@ -306,8 +312,16 @@ int SpreadSheet::getMaxLinesInRow(std::vector<std::vector<int> > lengths, int li
 			
 			if (filledNow > lineWidth)
 			{
-				currentLines += 1;
-				filledNow = lengths[i][j];
+				if (lengths[i][j] <= lineWidth)
+				{
+					currentLines += 1;
+					filledNow = lengths[i][j];
+				}
+				else 
+				{
+					currentLines += 1 + (lengths[i][j] / lineWidth) ;
+					filledNow = lengths[i][j] % lineWidth;
+				}				
 			}
 		}
 

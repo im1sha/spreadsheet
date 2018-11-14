@@ -37,6 +37,7 @@ private:
 	
 	LONG minColumnWidth_ = 0;
 	LONG firstRowHeight_ = 0;
+	LONG maxColumnWidth_ = 0;
 
 	LONG lineHeight_ = 0;
 	int spaceWidth_ = 0;
