@@ -120,7 +120,7 @@ LRESULT CALLBACK Window::windowProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 		if ((s != nullptr) && s->isInitialized())
 		{
 			MINMAXINFO* m = (MINMAXINFO*)lParam;
-			POINT minDimensions = s->getMinWidthAndHeight();
+			POINT minDimensions = s->getMinWindowSize();
 			m->ptMinTrackSize.x = minDimensions.x;
 			m->ptMinTrackSize.y = minDimensions.y;
 		}

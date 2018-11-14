@@ -19,7 +19,7 @@ void SpreadSheet::initialize(int rows, int columns, std::vector<std::wstring> st
 
 	HDC winDC = ::GetDC(hWnd_);
 
-	hPen_ = ::CreatePen(PS_SOLID, 1, RGB(100, 100, 200));
+	hPen_ = ::CreatePen(PS_SOLID, 1, RGB(200, 100, 200));
 	hOldPen_ = (HPEN) ::SelectObject(winDC, hPen_);
 
 	oldBackground_ = ::SetBkMode(winDC, TRANSPARENT);
@@ -30,6 +30,7 @@ void SpreadSheet::initialize(int rows, int columns, std::vector<std::wstring> st
 		CLIP_DEFAULT_PRECIS, NONANTIALIASED_QUALITY,
 		DEFAULT_PITCH | FF_SWISS, DEFAULT_FONT.c_str());
 	hPreviousFont_ = ::SelectObject(winDC, hFont_);
+	oldColor_ = ::SetTextColor(winDC, RGB(0, 0, 0));
 
 	// retrieve space width
 	SIZE spaceSize = {};
@@ -57,6 +58,8 @@ void SpreadSheet::initialize(int rows, int columns, std::vector<std::wstring> st
 
 void SpreadSheet::deinitialize()
 {
+	isInitialized_ = false;
+
 	// restoring previous graphical settings
 	HDC wndDC = ::GetDC(hWnd_);
 
@@ -70,6 +73,7 @@ void SpreadSheet::deinitialize()
 	}
 	
 	::SetBkMode(wndDC, oldBackground_);
+	::SetTextColor(wndDC, oldColor_);
 
 	if (hOldPen_ != nullptr && wndDC != nullptr)
 	{
@@ -91,9 +95,20 @@ bool SpreadSheet::isInitialized()
 	return isInitialized_;
 }
 
-POINT SpreadSheet::getMinWidthAndHeight()
+POINT SpreadSheet::getMinWindowSize()
 {
-	return { minColumnWidth_, firstRowHeight_ };
+	RECT clientSize;
+	RECT windowSize;
+
+	POINT deltaSize; // == windowSize - clientSize
+
+	GetClientRect(hWnd_, &clientSize);
+	GetWindowRect(hWnd_, &windowSize);
+
+	deltaSize.x = (windowSize.right - windowSize.left) - clientSize.right;
+	deltaSize.y = (windowSize.bottom - windowSize.top) - clientSize.bottom;
+
+	return { minColumnWidth_ * columns_ + deltaSize.x, firstRowHeight_ + deltaSize.y };
 }
 
 // updates table represetation
@@ -125,11 +140,13 @@ void SpreadSheet::draw(int rows, int columns)
 	::SelectObject(wndDC, hPen_);
 	::SelectObject(wndDC, hFont_);
 	::SetBkMode(wndDC, TRANSPARENT);
+	::SetTextColor(wndDC, RGB(46, 23, 150));
 
-	// draw parameters calculating
+	// width calculating
 	int averageColumnWidth = (clientRect.right - clientRect.left) / columns;
 	int xStep = (averageColumnWidth < minColumnWidth_) ? minColumnWidth_ : averageColumnWidth; /* column width */
 
+	// rows height calculating
 	std::vector<int> textHeights = this->getTextHeights(wordsLenghts_, xStep, lineHeight_);
 	firstRowHeight_ = textHeights[0];
 	int fullTextHeight = 0;
@@ -139,7 +156,7 @@ void SpreadSheet::draw(int rows, int columns)
 	}
 
 	std::vector<int> ySteps(rows);
-
+	
 	if (clientRect.bottom - clientRect.top > fullTextHeight)
 	{
 		for (size_t i = 0; i < rows; i++)
@@ -153,6 +170,7 @@ void SpreadSheet::draw(int rows, int columns)
 		ySteps = textHeights;
 	}
 
+	// table painting
 	this->paintTable(rows, columns, xStep, ySteps, clientRect.right - clientRect.left, textHeights, tableStrings_, wndDC);
 
 	// draw ending
@@ -161,7 +179,7 @@ void SpreadSheet::draw(int rows, int columns)
 }
 
 // paints table 
-void SpreadSheet::paintTable(int rows, int columns, int xStep, std::vector<int> ySteps, int totalWidth, std::vector<int> textHeights, WCHAR** strings, HDC wndDC)
+void SpreadSheet::paintTable(int rows, int columns, int xStep, std::vector<int> ySteps, int totalWidth, std::vector<int> textHeights, wchar_t** strings, HDC wndDC)
 {
 	int currentBottom = 0;
 	
@@ -171,7 +189,7 @@ void SpreadSheet::paintTable(int rows, int columns, int xStep, std::vector<int> 
 		currentBottom +=  yStep;
 		for (size_t i = 0; i < columns; i++)
 		{
-			WCHAR* textToPrint = strings[j * columns + i];
+			wchar_t* textToPrint = strings[j * columns + i];
 
 			RECT cell = {
 				(LONG)(xStep * i),
@@ -190,7 +208,7 @@ void SpreadSheet::paintTable(int rows, int columns, int xStep, std::vector<int> 
 				cell.right + 1,
 				cell.bottom + 1
 			);
-
+			
 			::DrawText(wndDC, textToPrint, (int) wcslen(textToPrint),
 				&textRect, DT_CENTER | DT_WORDBREAK | DT_EDITCONTROL);
 		}
