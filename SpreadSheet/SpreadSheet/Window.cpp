@@ -3,7 +3,7 @@
 Window::Window(HINSTANCE hInstance, int nCmdShow)
 {
 	this->hInstance_ = hInstance;
-	HWND hWnd = initialize(hInstance, nCmdShow);
+	HWND hWnd = this->initialize(hInstance, nCmdShow);
 	this->hWnd_ = hWnd;
 	this->spreadSheet_ = new SpreadSheet(hWnd);
 }
@@ -39,7 +39,7 @@ int Window::messageLoop()
 	MSG msg;
 	BOOL result;
 
-	while (result = GetMessage(&msg, nullptr, 0, 0))
+	while (result = ::GetMessage(&msg, nullptr, 0, 0))
 	{
 		if (-1 == result)
 		{
@@ -52,41 +52,20 @@ int Window::messageLoop()
 	return (int)msg.wParam;
 }
 
-bool Window::correctTableData()
-{
-	int linesToPush = this->totalStrings - (int) tableData_.size();
-
-	if (linesToPush > 0)
-	{
-		for (size_t i = 0; i < linesToPush; i++)
-		{
-			tableData_.push_back(L"");
-		}
-	} 
-	else
-	{
-		int linesToPop = ::abs(linesToPush);
-		for (size_t i = 0; i < linesToPop; i++)
-		{
-			tableData_.pop_back();
-		}
-	}
-
-	return true;
-}
-
 HWND Window::initialize(HINSTANCE hInstance, int nCmdShow)
 {
 	WNDCLASSEX wndClassEx = { };
 	this->registerClass(wndClassEx, hInstance, Window::windowProc);
-	HWND hWnd = ::CreateWindow(DEFAULT_CLASS_NAME, DEFAULT_WINDOW_NAME, WS_OVERLAPPEDWINDOW /*| WS_HSCROLL | WS_VSCROLL*/,
-		100, 100, DEFAULT_WINDOW_WIDTH_HEIGHT.x, DEFAULT_WINDOW_WIDTH_HEIGHT.y, HWND_DESKTOP, nullptr, hInstance, 0);
+	HWND hWnd = ::CreateWindow(DEFAULT_CLASS_NAME, DEFAULT_WINDOW_NAME, WS_OVERLAPPEDWINDOW,
+		100, 100, DEFAULT_WINDOW_WIDTH_HEIGHT.x, DEFAULT_WINDOW_WIDTH_HEIGHT.y, 
+		HWND_DESKTOP, nullptr, hInstance, 0);
 
 	// save a reference to the current Window instance 
 	::SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR)this);
 
 	::ShowWindow(hWnd, nCmdShow);
 	::UpdateWindow(hWnd);
+
 	return hWnd;
 }
 
@@ -130,15 +109,15 @@ LRESULT CALLBACK Window::windowProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 	{		
 		if (window != nullptr)
 		{	
-			window->processCreateChildItemsRequest();
-			
+			window->processCreateChildItemsRequest();			
 			window->loadStringsFromFile();
 		}
 		break;
 	}
 	case WM_GETMINMAXINFO:
 	{
-		if ((s != nullptr) && (s->areDimensionsSet()))
+		// set min table height & width 
+		if ((s != nullptr) && s->isInitialized())
 		{
 			MINMAXINFO* m = (MINMAXINFO*)lParam;
 			POINT minDimensions = s->getMinWidthAndHeight();
@@ -151,17 +130,20 @@ LRESULT CALLBACK Window::windowProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 	{
 		if (window != nullptr)
 		{
+			// process click on OK button
 			if (LOWORD(wParam) == window->DEFAULT_OK_NO)
 			{
-				if (window->tableData_.size() != 0)
+				if (window->loadedStrings_.size() != 0)
 				{					
 					window->processShowSpreadsheetRequest(lParam);
 				}
 				else 
 				{
-					::MessageBox(hWnd, L"Empty file loaded", L"Attention", MB_OK);
+					::MessageBox(hWnd, L"File loading required", L"Attention", MB_OK);
 				}
 			}
+
+			// process click on LOAD button
 			if (LOWORD(wParam) == window->DEFAULT_LOAD_NO)
 			{				
 				window->loadStringsFromFile();								
@@ -178,7 +160,6 @@ LRESULT CALLBACK Window::windowProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 		break;
 	}
 	case WM_SIZE: 
-
 	case WM_PAINT: 
 	{	
 		if (s != nullptr)
@@ -189,7 +170,7 @@ LRESULT CALLBACK Window::windowProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 	}
 	case WM_CLOSE:
 	{
-		PostQuitMessage(0);
+		::PostQuitMessage(0);
 		break;
 	}
 	default:
@@ -222,14 +203,14 @@ bool Window::processShowSpreadsheetRequest(LPARAM lParam)
 			(columns < s->MIN_LINES) || (columns > s->MAX_LINES);
 		if (wrongInput)
 		{
-			::MessageBox(hWnd, L"Incorrect values", L"Attention", MB_OK);
+			::MessageBox(hWnd, L"Incorrect table dimensions", L"Attention", MB_OK);
 		}
 		else // create table if input is correct
 		{
-			this->totalStrings = rows * columns;
-			this->correctTableData();
+			this->totalStrings_ = rows * columns;
+			this->correctLoadedStrings();
 
-			s->initialize(rows, columns, tableData_, lParam);
+			s->initialize(rows, columns, loadedStrings_, lParam);
 
 			::DestroyWindow(this->editRowsHwnd_);
 			::DestroyWindow(this->editColumnsHwnd_);
@@ -322,18 +303,18 @@ bool Window::loadStringsFromFile()
 	
 	if (sucessful)
 	{	
-		tableData_.clear();
+		loadedStrings_.clear();
 		std::wifstream stream(fileName, std::wios::binary);
 		std::wstring line;                                          
 
 		if (stream.is_open())
 		{
-			size_t maxCells = SpreadSheet::MAX_STRINGS;
+			size_t maxCells = SpreadSheet::MAX_CELLS;
 			for (size_t i = 0; i < maxCells; i++)
 			{
 				if (std::getline(stream, line))
 				{
-					tableData_.push_back(line);
+					loadedStrings_.push_back(line);
 				}
 				else 
 				{
@@ -348,27 +329,28 @@ bool Window::loadStringsFromFile()
 		}
 	}
 
-
 	return sucessful;
 }
 
+bool Window::correctLoadedStrings()
+{
+	int linesToPush = this->totalStrings_ - (int) loadedStrings_.size();
 
+	if (linesToPush > 0)
+	{
+		for (size_t i = 0; i < linesToPush; i++)
+		{
+			loadedStrings_.push_back(L"");
+		}
+	}
+	else
+	{
+		int linesToPop = ::abs(linesToPush);
+		for (size_t i = 0; i < linesToPop; i++)
+		{
+			loadedStrings_.pop_back();
+		}
+	}
 
-//// set font
-//window->hDC_ = GetDC(hWnd);
-//window->hFont_ = CreateFont(window->DEFAULT_FONT_SIZE, NULL, NULL, NULL,
-//	FW_NORMAL, FALSE, FALSE, FALSE,
-//	DEFAULT_CHARSET, OUT_TT_ONLY_PRECIS,
-//	CLIP_DEFAULT_PRECIS, NONANTIALIASED_QUALITY,
-//	DEFAULT_PITCH | FF_SWISS, window->DEFAULT_FONT.c_str());
-//window->hPreviousFont_ = SelectObject(window->hDC_, window->hFont_);		
-//ReleaseDC(hWnd, window->hDC_);
-//// font restoring
-//if (hDC_ != nullptr && hPreviousFont_ != nullptr)
-//{
-//	SelectObject(hDC_, hPreviousFont_);
-//	if (hFont_ != nullptr)
-//	{
-//		DeleteObject(hFont_);
-//	}
-//}
+	return true;
+}

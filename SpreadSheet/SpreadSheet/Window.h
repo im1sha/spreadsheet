@@ -22,7 +22,6 @@ public:
 private:
 	HWND hWnd_ = nullptr;			// related HWND
 	HINSTANCE hInstance_ = nullptr; // current instance handle
-	HDC hDC_ = nullptr;				// device context
 
 	// values which identify hWnd_ 
 	const WCHAR DEFAULT_CLASS_NAME[20] = L"SpreadSheetClass";
@@ -50,13 +49,10 @@ private:
 	const int MAX_TEXT_LENGTH = 20;
 
 	SpreadSheet* spreadSheet_ = nullptr;
-	int totalStrings = 0;
-	std::vector<std::wstring> tableData_;
-
-	bool correctTableData();
-
+	int totalStrings_ = 0;
+	std::vector<std::wstring> loadedStrings_;
+	
 	HWND initialize(HINSTANCE hInstance, int nCmdShow);
-
 	ATOM registerClass(WNDCLASSEX wndClassEx, HINSTANCE hInstance, WNDPROC wndProc);
 	static LRESULT CALLBACK windowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
@@ -64,5 +60,5 @@ private:
 	bool processCreateChildItemsRequest();
 
 	bool loadStringsFromFile();
-
+	bool correctLoadedStrings();
 };
