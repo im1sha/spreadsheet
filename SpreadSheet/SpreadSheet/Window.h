@@ -9,6 +9,8 @@
 #include <string>
 #include <vector>
 #include <fstream>
+#include <codecvt>
+#include <sstream>
 
 class Window
 {

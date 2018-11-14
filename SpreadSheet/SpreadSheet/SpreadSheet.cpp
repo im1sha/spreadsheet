@@ -19,7 +19,7 @@ void SpreadSheet::initialize(int rows, int columns, std::vector<std::wstring> st
 
 	HDC winDC = ::GetDC(hWnd_);
 
-	maxColumnWidth_ = ::GetSystemMetrics(SM_CXSCREEN) / columns_ / 3;
+	defaultColumnWidth_ = ::GetSystemMetrics(SM_CXSCREEN) / columns_ / 3;
 
 	hPen_ = ::CreatePen(PS_SOLID, 1, RGB(200, 100, 200));
 	hOldPen_ = (HPEN) ::SelectObject(winDC, hPen_);
@@ -54,9 +54,9 @@ void SpreadSheet::initialize(int rows, int columns, std::vector<std::wstring> st
 			}
 		}
 	}
-	if (minColumnWidth_ > maxColumnWidth_)
+	if (minColumnWidth_ > defaultColumnWidth_)
 	{
-		minColumnWidth_ = maxColumnWidth_;
+		minColumnWidth_ = defaultColumnWidth_;
 	}
 
 	isInitialized_ = true;

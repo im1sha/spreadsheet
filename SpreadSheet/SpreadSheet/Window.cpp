@@ -58,7 +58,7 @@ HWND Window::initialize(HINSTANCE hInstance, int nCmdShow)
 	this->registerClass(wndClassEx, hInstance, Window::windowProc);
 	HWND hWnd = ::CreateWindow(DEFAULT_CLASS_NAME, DEFAULT_WINDOW_NAME, WS_OVERLAPPEDWINDOW,
 		100, 100, DEFAULT_WINDOW_WIDTH_HEIGHT.x, DEFAULT_WINDOW_WIDTH_HEIGHT.y, 
-		HWND_DESKTOP, nullptr, hInstance, 0);
+		HWND_DESKTOP, nullptr, hInstance, nullptr);
 
 	// save a reference to the current Window instance 
 	::SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR)this);
@@ -78,9 +78,9 @@ ATOM Window::registerClass(WNDCLASSEX wndClassEx, HINSTANCE hInstance, WNDPROC w
 	wndClassEx.cbWndExtra = 0;
 	wndClassEx.hInstance = hInstance;
 	wndClassEx.hIcon = nullptr;
-	wndClassEx.hCursor = ::LoadCursor(0, IDC_ARROW);
+	wndClassEx.hCursor = ::LoadCursor(nullptr, IDC_ARROW);
 	wndClassEx.hbrBackground = ::CreateSolidBrush(DEFAULT_BACKGROUND_COLOR);
-	wndClassEx.lpszMenuName = 0;
+	wndClassEx.lpszMenuName = nullptr;
 	wndClassEx.lpszClassName = DEFAULT_CLASS_NAME;
 	wndClassEx.hIconSm = nullptr;
 	return ::RegisterClassEx(&wndClassEx);
@@ -110,7 +110,11 @@ LRESULT CALLBACK Window::windowProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 		if (window != nullptr)
 		{	
 			window->processCreateChildItemsRequest();			
-			window->loadStringsFromFile();
+			bool result = window->loadStringsFromFile();
+			if (!result)
+			{
+				::MessageBox(hWnd, L"Error while loading", L"Attention", MB_OK);
+			}
 		}
 		break;
 	}
@@ -146,7 +150,11 @@ LRESULT CALLBACK Window::windowProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 			// process click on LOAD button
 			if (LOWORD(wParam) == window->DEFAULT_LOAD_NO)
 			{				
-				window->loadStringsFromFile();								
+				bool result = window->loadStringsFromFile();	
+				if (!result)
+				{
+					::MessageBox(hWnd, L"Error while loading", L"Attention", MB_OK);
+				}				
 			}
 		}
 		break;
@@ -287,7 +295,7 @@ bool Window::loadStringsFromFile()
 	OPENFILENAME openFileName;
 	openFileName.lStructSize = sizeof(OPENFILENAME);
 	openFileName.hwndOwner = hWnd_;
-	openFileName.hInstance = nullptr;
+	openFileName.hInstance = nullptr; /* Not supported */
 	openFileName.lpstrFilter = L"Text files\0*.txt\0\0";
 	openFileName.lpstrCustomFilter = nullptr;
 	openFileName.nFilterIndex = 1;
@@ -304,7 +312,11 @@ bool Window::loadStringsFromFile()
 	if (sucessful)
 	{	
 		loadedStrings_.clear();
-		std::wifstream stream(fileName, std::wios::binary);
+		std::wifstream stream(fileName);
+
+		// set file input format as utf-8
+		stream.imbue(std::locale(std::locale::empty(), new std::codecvt_utf8<wchar_t>));
+
 		std::wstring line;                                          
 
 		if (stream.is_open())
@@ -324,6 +336,11 @@ bool Window::loadStringsFromFile()
 			stream.close();
 		}
 		else 
+		{
+			sucessful = false;
+		}
+
+		if (loadedStrings_.size() == 0)
 		{
 			sucessful = false;
 		}
