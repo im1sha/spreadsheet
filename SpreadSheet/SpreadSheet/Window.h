@@ -43,8 +43,8 @@ private:
 
 	const LONG DEFAULT_CHILD_STYLE = WS_BORDER | WS_CHILD | WS_VISIBLE;
 
-	const int DEFAULT_OK_NO = 1;	// button OK command LOWORD(wParam) value
-	const int DEFAULT_LOAD_NO = 2;	// button LOAD command LOWORD(wParam) value
+	const LONG_PTR DEFAULT_OK_NO = 1;	// button OK command LOWORD(wParam) value
+	const LONG_PTR DEFAULT_LOAD_NO = 2;	// button LOAD command LOWORD(wParam) value
 
 	const int MAX_TEXT_LENGTH = 20;
 
